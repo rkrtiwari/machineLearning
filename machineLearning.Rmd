@@ -1,0 +1,57 @@
+---
+title: "Machine Learning"
+author: "Ravi Kumar Tiwari"
+date: "14 June 2016"
+output: html_document
+---
+
+
+```{r}
+library(caret)
+library(rpart.plot)
+library(rattle)
+```
+
+```{r}
+nrow(iris)
+```
+
+
+```{r}
+inTrain <- createDataPartition(iris$Species, p = 0.6, list = FALSE)
+trainData <- iris[inTrain,]
+testData <- iris[-inTrain,]
+```
+
+```{r}
+treeModel <- train(Species ~ ., data = trainData, method = "rpart")
+preClass <- predict(treeModel, newdata = testData)
+confusionMatrix(preClass, testData$Species)
+```
+
+```{r}
+fancyRpartPlot(treeModel$finalModel)  
+```
+
+```{r}
+plot(trainData$Petal.Length, trainData$Petal.Width, col = trainData$Species, pch = 19)
+abline(v = 2.4)
+abline(h = 1.7)
+text(x = 2.2, y = 1.1, labels = "Decision Boundary 1", srt = 90)
+text(x = 2.7, y = 1.8, labels = "Decision Boundary 2")
+```
+
+```{r}
+varImp(treeModel)
+```
+
+
+```{r}
+predResult <- ifelse(preClass == testData$Species, "green", "red")
+plot(testData$Petal.Length, testData$Petal.Width, col = predResult, pch = 19)
+abline(v = 2.4)
+abline(h = 1.7)
+```
+
+
+
