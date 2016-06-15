@@ -64,5 +64,34 @@ text(x = 2.2, y = 1.1, labels = "Decision Boundary 1", srt = 90)
 text(x = 3.9, y = 1.8, labels = "Decision Boundary 2")
 ```
 
+## Cross-validation
+```{r}
+drawPoly <- function(x,y, col){
+  polygon(c(x,x+1,x+1,x, x), c(y,y,y+0.5,y+0.5,y), col = col)
+}
 
+
+plot(1, type="n", axes=F, xlab="", ylab="", xlim = c(0,6), ylim= c(0,8),
+     main = "5 fold cross validation illustration")
+for (i in 1:5){
+  for (j in 1:5) {
+    col <- ifelse(i==j, "red", "green")
+    drawPoly(i,j, col)
+  }
+}
+
+drawPoly(1,6, "red")
+drawPoly(1,7, "green")
+
+for(i in 1:5){
+  text(i+0.5, 0.5, label = paste("k = ", i, sep = ""))
+}
+
+for(i in 1:5){
+  text(0.5, i+0.25, label = i)
+}
+
+text(3, 7.3, label = "Training Data")
+text(3, 6.3, label = "Test Data")
+```
 
