@@ -6,34 +6,48 @@ output: pdf_document
 ---
 
 
-```{r}
+```{r, echo = TRUE, results='hide', message=FALSE, warning=FALSE}
 library(caret)
 library(rpart.plot)
 library(rattle)
+library(calibrate)
 ```
+
+## Decision Tree Example
 
 ```{r}
-nrow(iris)
+head(iris)
 ```
 
-
+Create data partition
 ```{r}
 inTrain <- createDataPartition(iris$Species, p = 0.6, list = FALSE)
 trainData <- iris[inTrain,]
 testData <- iris[-inTrain,]
 ```
 
+Build a decision tree model and use it for prediction on test data set
 ```{r}
 treeModel <- train(Species ~ ., data = trainData, method = "rpart")
 preClass <- predict(treeModel, newdata = testData)
-confusionMatrix(preClass, testData$Species)
+cMatrix <- confusionMatrix(preClass, testData$Species)
+cMatrix$table
 ```
+
+Look at what are the important variables
+```{r}
+varImp(treeModel)
+```
+
+Visualization of the decision tree
 
 ```{r}
 fancyRpartPlot(treeModel$finalModel)  
 ```
 
-```{r}
+Alternative visualization of the decision tree
+
+```{r, echo=FALSE}
 preClassType <- ifelse(trainData$Species == "setosa", 15, 
                    ifelse(trainData$Species== "versicolor", 17, 19))
 plot(trainData$Petal.Length, trainData$Petal.Width, col = trainData$Species, 
@@ -44,12 +58,10 @@ text(x = 2.2, y = 1.1, labels = "Decision Boundary 1", srt = 90)
 text(x = 3.9, y = 1.8, labels = "Decision Boundary 2")
 ```
 
-```{r}
-varImp(treeModel)
-```
 
+Visualization of the prediction result
 
-```{r}
+```{r, echo = FALSE}
 predResult <- ifelse(preClass == testData$Species, "green", "red")
 
 preClass <- ifelse(testData$Species == "setosa", 15, 
@@ -64,14 +76,121 @@ text(x = 2.2, y = 1.1, labels = "Decision Boundary 1", srt = 90)
 text(x = 3.9, y = 1.8, labels = "Decision Boundary 2")
 ```
 
-## Cross-validation
+
+
+## Clustering Example
+### K-means clustering
+
+```{r, echo = FALSE}
+x <- seq(from=1,to=10,length.out = 10)
+set.seed(10)
+y1 <- rnorm(5, 4, 0.5)
+set.seed(20)
+y2 <- rnorm(5, 8, 0.5)
+y <- c(y1,y2)
+obs <- data.frame(x,y)
+```
+
 ```{r}
+head(obs)
+```
+
+
+```{r, echo = FALSE}
+par(mfrow=c(1,1))
+plot(x,y, cex = 1.5, pch = 19)
+```
+
+Using data to create 2 clusters
+```{r}
+kmeansObj <-  kmeans(obs, centers = 2)
+data.frame(obs, cluster = kmeansObj$cluster)
+kmeansObj$centers
+```
+
+```{r, echo=FALSE}
+plot(x,y, col= kmeansObj$cluster, pch = 19, cex = 1.5, xlim = c(0,12), ylim = c(0,12))
+points(kmeansObj$centers, pch = 8, cex = 2.0, col = rownames(kmeansObj$centers))
+textxy(x+0.1,y + 0.1, labs = 1:10, cex = 1, col = kmeansObj$cluster)
+```
+
+
+Using data to create 4 clusters
+```{r}
+kmeansObj <-  kmeans(obs, centers = 4)
+data.frame(obs, cluster = kmeansObj$cluster)
+kmeansObj$centers
+```
+
+
+```{r, echo = FALSE}
+par(mfrow=c(1,1))
+plot(x,y, col= kmeansObj$cluster, pch = 19, cex = 1.5, xlim = c(0,12), ylim = c(0,12))
+points(kmeansObj$centers, pch = 8, cex = 2.0, col = rownames(kmeansObj$centers))
+textxy(x+0.1,y + 0.1, labs = 1:10, cex = 1, col = kmeansObj$cluster)
+```
+
+
+### Hierarchical Clustering
+```{r, echo = FALSE}
+x <- seq(from=1,to=10,length.out = 10)
+set.seed(10)
+y1 <- rnorm(5, 4, 0.5)
+set.seed(20)
+y2 <- rnorm(5, 8, 0.5)
+y <- c(y1,y2)
+par(mfrow=c(1,1))
+plot(x,y, xlim = c(0,10), ylim = c(0,10), pch = 19)
+```
+
+```{r}
+distM <- dist(obs)
+clusters <- hclust(distM, method = "ward.D")
+```
+
+Create 2 partitions
+
+```{r}
+mem <- cutree(clusters, k =2)
+data.frame(obs, cluster = mem)
+```
+
+```{r, echo=FALSE} 
+par(mfrow=c(1,2))
+
+plot(clusters)
+abline(h=10)
+text(5, 12, labels = "2 partitions")
+plot(x,y, col=mem, pch = 19, cex = 1.5, xlim = c(0,12), ylim=c(0,12),
+     main="Same color points form a group")
+textxy(x+0.1,y + 0.1, labs = 1:10, cex = 1, col = mem)
+```
+
+Create 4 partitions
+
+```{r}
+mem <- cutree(clusters, k =4)
+data.frame(obs, cluster = mem)
+```
+
+```{r, echo=FALSE}
+par(mfrow=c(1,2))
+plot(clusters)
+abline(h=3.5)
+text(5, 5, labels = "4 partitions")
+plot(x,y, col=mem, pch = 19, cex = 1.5, xlim = c(0,12), ylim=c(0,12),
+     main="Same color points form a group")
+textxy(x+0.1,y + 0.1, labs = 1:10, cex = 1, col = mem)
+```
+
+## Cross-validation
+```{r, echo = FALSE}
 drawPoly <- function(x,y, col){
   polygon(c(x,x+1,x+1,x, x), c(y,y,y+0.5,y+0.5,y), col = col)
 }
 
 
-plot(1, type="n", axes=F, xlab="", ylab="", xlim = c(0,6), ylim= c(0,8),
+plot(1, type="n", axes=F, xlab="", ylab="", xlim = c(0.5,6), ylim= c(0,8),
      main = "5 fold cross validation illustration")
 for (i in 1:5){
   for (j in 1:5) {
@@ -88,7 +207,7 @@ for(i in 1:5){
 }
 
 for(i in 1:5){
-  text(0.5, i+0.25, label = i)
+  text(0.5, i+0.25, label = 6-i)
 }
 
 text(3, 7.3, label = "Training Data")
