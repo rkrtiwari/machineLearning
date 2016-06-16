@@ -229,11 +229,12 @@ text(3, 6.3, label = "Test Data")
 ```
 
 \newpage
-### random Forest
 
-There are two parameters in the random forest
-ntree
-mtry
+## random Forest
+
+
+### ntree
+
 
 ```{r, echo = FALSE}
 
@@ -357,6 +358,100 @@ symbols(x = seq(8,11, length.out = 5), y = rep(3.671,5),  circles = rep(0.05,5),
         bg = "black", add = TRUE, inches = FALSE)
 
 ```
+
+\newpage
+
+### mtry
+
+```{r, echo = FALSE}
+## create 1st rectangle
+plot(1, type="n", axes=F, xlab="", ylab="", xlim = c(-5,17), ylim= c(-11,10),
+     main = "Random Forest")
+symbols(x = 7, y = 9,  rectangles =  matrix(c(10,6), ncol=2), 
+        bg = "blue", add = TRUE, inches = FALSE)
+xc <- seq(2.5, 11.5, length.out = 9)
+xc <- rep(xc,2)
+yc <- rep(c(7.2,9.2), each = 9)
+rad <- 0.3
+
+set.seed(2000)
+col <- sample(c("red", "green"), size = 18, prob = c(0.7, 0.3), replace = TRUE)
+
+symbols(xc, yc,  circles =  rep(rad,18), 
+        bg = col, add = TRUE, inches = FALSE)
+
+## create 2nd rectangle
+set.seed(100)
+index <- sample(1:18, size = 12)
+
+symbols(x = 2, y = 2,  rectangles =  matrix(c(8,4), ncol=2), 
+        bg = "blue", add = TRUE, inches = FALSE)
+
+xc <- seq(0, 5.5, length.out = 6)
+xc <- rep(xc,2)
+yc <- rep(c(1.1,3.1), each = 6)
+
+symbols(xc, yc,  circles =  rep(rad,12), 
+        bg = col[index], add = TRUE, inches = FALSE)
+
+text(2, -1.5, labels  = "Random subsample used to build")
+text(2, -2.5, labels  = "the tree (2/3 of original)")
+## create 3rd rectangle
+symbols(x = 14, y = 2,  rectangles =  matrix(c(8,4), ncol=2), 
+        bg = "blue", add = TRUE, inches = FALSE)
+
+xc <- seq(11, 15, length.out = 3)
+xc <- rep(xc,2)
+yc <- rep(c(1.1,3.1), each = 3)
+
+symbols(xc, yc,  circles =  rep(rad,6), 
+        bg = col[-index], add = TRUE, inches = FALSE)
+text(13, -1.5, labels  = "Random 'OOB' sample")
+text(13, -2.5, labels  = "internally validate tree")
+
+## create a decision tree
+treeno <- 1 # 1, 2, "n"
+x0 <- 1.35  # 1.35, 5.35, 13.35
+y0 <- -4
+r <- 0.25
+
+coordinates <- treeCoordinates(x0, y0)
+xl <- coordinates[1]
+yl <- coordinates[2]
+nc <- length(unlist(xl))
+
+ax0l <- coordinates[3]
+ay0l <- coordinates[4]
+ax1l <- coordinates[5]
+ay1l <- coordinates[6]
+
+symbols(x = unlist(xl), y = unlist(yl),  circles = rep(r,nc), 
+        bg = "red", add = TRUE, inches = FALSE)
+arrows(unlist(ax0l), unlist(ay0l), unlist(ax1l), unlist(ay1l), length = 0.1)
+
+
+
+## create second decision tree
+x0 <- 12  # 1.35, 5.35, 13.35
+y0 <- -4
+
+coordinates <- treeCoordinates(x0, y0)
+xl <- coordinates[1]
+yl <- coordinates[2]
+nc <- length(unlist(xl))
+
+ax0l <- coordinates[3]
+ay0l <- coordinates[4]
+ax1l <- coordinates[5]
+ay1l <- coordinates[6]
+
+symbols(x = unlist(xl), y = unlist(yl),  circles = rep(r,nc), 
+        bg = "blue", add = TRUE, inches = FALSE)
+arrows(unlist(ax0l), unlist(ay0l), unlist(ax1l), unlist(ay1l), length = 0.1)
+
+
+```
+
 
 
 ```{r}
