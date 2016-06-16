@@ -236,71 +236,126 @@ ntree
 mtry
 
 ```{r, echo = FALSE}
-treeno <- 2 # 1, 2, "n"
-x0 <- 5.35  # 1.35, 5.35, 13.35
-y0 <- 7
-n <- 3
-r <- 0.25
-l <- 3
-theta1 <- -pi/3
-theta2 <- -2*pi/3
-xl <- vector("list",n)
-xl[1] <- x0
-for (i in 2:n){
-  for (j in seq(1,2^(i-1),by=2)){
-    k <- ceiling(j/2)
-    print(c(i,j,k))
-    print(c(i,j+1,k))
-    xl[[i]][j]   = xl[[i-1]][k] + cos(theta1 - (i-1)*pi/15)*(2*r+l)
-    xl[[i]][j+1] = xl[[i-1]][k] + cos(theta2 + (i-1)*pi/15)*(2*r+l)
 
-  } 
-}
-
-yl <- vector("list",n)
-yl[1] <- y0
-for (i in 2:n){
-  for (j in seq(1,2^(i-1),by=2)){
-    k <- ceiling(j/2)
-    print(c(i,j,k))
-    print(c(i,j+1,k))
-    yl[[i]][j]   = yl[[i-1]][k] + sin(theta1 - (i-1)*pi/15)*(2*r+l)
-    yl[[i]][j+1] = yl[[i-1]][k] + sin(theta2 + (i-1)*pi/15 )*(2*r+l)
-
-  } 
-}
-
-nx1 <- length(xl)
-ax0l <- vector("list", (n-1))
-ax1l <- vector("list", (n-1))
-ay0l <- vector("list", (n-1))
-ay1l <- vector("list", (n-1))
-for(i in 1:(nx1-1)){
-  narr <- length(xl[[i]])
-  for (j in 1:narr){
-    k <- 2*j - 1
-    ax0l[[i]][k] <- xl[[i]][j] + r*cos(theta1 - i*pi/15)
-    ax0l[[i]][k+1] <- xl[[i]][j] + r*cos(theta2 + i*pi/15)
-    
-    ax1l[[i]][k] <- xl[[i]][j] + (r+l)*cos(theta1 - i*pi/15)
-    ax1l[[i]][k+1] <- xl[[i]][j] + (r+l)*cos(theta2 + i*pi/15)
-    
-    ay0l[[i]][k] <- yl[[i]][j] + r*sin(theta1 - i*pi/15)
-    ay0l[[i]][k+1] <- yl[[i]][j] + r*sin(theta2 + i*pi/15)
-    
-    ay1l[[i]][k] <- yl[[i]][j] + (r+l)*sin(theta1 - i*pi/15)
-    ay1l[[i]][k+1] <- yl[[i]][j] + (r+l)*sin(theta2 + i*pi/15)
+treeCoordinates <- function(x0, y0){
+  n <- 3
+  r <- 0.25
+  l <- 3
+  theta1 <- -pi/3
+  theta2 <- -2*pi/3
+  xl <- vector("list",n)
+  xl[1] <- x0
+  for (i in 2:n){
+    for (j in seq(1,2^(i-1),by=2)){
+      k <- ceiling(j/2)
+      xl[[i]][j]   = xl[[i-1]][k] + cos(theta1 - (i-1)*pi/15)*(2*r+l)
+      xl[[i]][j+1] = xl[[i-1]][k] + cos(theta2 + (i-1)*pi/15)*(2*r+l)
+    }
   }
+  
+  yl <- vector("list",n)
+  yl[1] <- y0
+  for (i in 2:n){
+    for (j in seq(1,2^(i-1),by=2)){
+      k <- ceiling(j/2)
+      yl[[i]][j]   = yl[[i-1]][k] + sin(theta1 - (i-1)*pi/15)*(2*r+l)
+      yl[[i]][j+1] = yl[[i-1]][k] + sin(theta2 + (i-1)*pi/15 )*(2*r+l)
+    }
+  }
+  
+  nx1 <- length(xl)
+  ax0l <- vector("list", (n-1))
+  ax1l <- vector("list", (n-1))
+  ay0l <- vector("list", (n-1))
+  ay1l <- vector("list", (n-1))
+  
+  for(i in 1:(nx1-1)){
+    narr <- length(xl[[i]])
+    for (j in 1:narr){
+      k <- 2*j - 1
+      ax0l[[i]][k] <- xl[[i]][j] + r*cos(theta1 - i*pi/15)
+      ax0l[[i]][k+1] <- xl[[i]][j] + r*cos(theta2 + i*pi/15)
+      ax1l[[i]][k] <- xl[[i]][j] + (r+l)*cos(theta1 - i*pi/15)
+      ax1l[[i]][k+1] <- xl[[i]][j] + (r+l)*cos(theta2 + i*pi/15)
+      
+      ay0l[[i]][k] <- yl[[i]][j] + r*sin(theta1 - i*pi/15)
+      ay0l[[i]][k+1] <- yl[[i]][j] + r*sin(theta2 + i*pi/15)
+      
+      ay1l[[i]][k] <- yl[[i]][j] + (r+l)*sin(theta1 - i*pi/15)
+      ay1l[[i]][k+1] <- yl[[i]][j] + (r+l)*sin(theta2 + i*pi/15)
+    }
+  }
+  return(list(xl, yl, ax0l, ay0l, ax1l, ay1l))
 }
+  
 
 
-nc <- length(unlist(xl))
+
 plot(1, type="n", axes=F, xlab="", ylab="", xlim = c(0,15), ylim= c(0,10),
      main = "Random Forest")
+treeno <- 1 # 1, 2, "n"
+x0 <- 1.35  # 1.35, 5.35, 13.35
+y0 <- 7
+r <- 0.25
+
+coordinates <- treeCoordinates(x0, y0)
+xl <- coordinates[1]
+yl <- coordinates[2]
+nc <- length(unlist(xl))
+
+ax0l <- coordinates[3]
+ay0l <- coordinates[4]
+ax1l <- coordinates[5]
+ay1l <- coordinates[6]
+
 symbols(x = unlist(xl), y = unlist(yl),  circles = rep(r,nc), 
         bg = "red", add = TRUE, inches = FALSE)
 arrows(unlist(ax0l), unlist(ay0l), unlist(ax1l), unlist(ay1l), length = 0.1)
 text(x0, y0+1.5, label = paste("tree:", treeno))
+
+treeno <- 2 # 1, 2, "n"
+x0 <- 5.35  # 1.35, 5.35, 13.35
+y0 <- 7
+
+coordinates <- treeCoordinates(x0, y0)
+xl <- coordinates[1]
+yl <- coordinates[2]
+nc <- length(unlist(xl))
+
+ax0l <- coordinates[3]
+ay0l <- coordinates[4]
+ax1l <- coordinates[5]
+ay1l <- coordinates[6]
+
+symbols(x = unlist(xl), y = unlist(yl),  circles = rep(r,nc), 
+        bg = "blue", add = TRUE, inches = FALSE)
+arrows(unlist(ax0l), unlist(ay0l), unlist(ax1l), unlist(ay1l), length = 0.1)
+text(x0, y0+1.5, label = paste("tree:", treeno))
+
+
+treeno <- "n" # 1, 2, "n"
+x0 <- 13.35  # 1.35, 5.35, 13.35
+y0 <- 7
+
+coordinates <- treeCoordinates(x0, y0)
+xl <- coordinates[1]
+yl <- coordinates[2]
+nc <- length(unlist(xl))
+
+ax0l <- coordinates[3]
+ay0l <- coordinates[4]
+ax1l <- coordinates[5]
+ay1l <- coordinates[6]
+
+symbols(x = unlist(xl), y = unlist(yl),  circles = rep(r,nc), 
+        bg = "green", add = TRUE, inches = FALSE)
+arrows(unlist(ax0l), unlist(ay0l), unlist(ax1l), unlist(ay1l), length = 0.1)
+text(x0, y0+1.5, label = paste("tree:", treeno))
+
+
+symbols(x = seq(8,11, length.out = 5), y = rep(3.671,5),  circles = rep(0.05,5), 
+        bg = "black", add = TRUE, inches = FALSE)
+
 ```
 
 
