@@ -12,7 +12,45 @@ library(rpart.plot)
 library(rattle)
 library(calibrate)
 library(randomForest)
+library(e1071)
+library(class)
+library(knitr)
 ```
+
+## knn
+```{r, echo=FALSE, results='hide'}
+## Data Preparation
+set.seed(100)
+theta1 <- runif(40, min = 0, max = 2*pi)
+r1 <- rnorm(40, mean=0, sd=1)
+c1x <- 1
+c1y <- 1
+X1 <- c1x + r1*cos(theta1)
+Y1 <- c1y + r1*sin(theta1)
+#plot(X1,Y1)
+
+set.seed(200)
+theta2 <- runif(40, min = 0, max = 2*pi)
+r2 <- rnorm(40, mean=0, sd=1)
+c2x <- 3
+c2y <- 1
+X2 <- c2x + r2*cos(theta2)
+Y2 <- c2y + r2*sin(theta2)
+#plot(X2,Y2)
+
+df1 <- data.frame(X = X1, Y = Y1, group = "group1")
+df2 <- data.frame(X = X2, Y = Y2, group = "group2")
+df <- rbind(df1,df2)
+```
+
+
+```{r, echo=FALSE, results='hide'}
+#plot(df$X, df$Y, pch = 19, col = df$group, xlab = "X", ylab = "Y", 
+#     xlim = c(-1,5), ylim = c(-1,5))
+#legend(4,4, c("group1", "group2"), col = c("black", "red"), pch = c(19,19))
+```
+
+
 
 ## Decision Tree Example
 ### Problem Description
@@ -25,6 +63,7 @@ head(iris)
 
 Create data partition
 ```{r}
+set.seed(100)
 inTrain <- createDataPartition(iris$Species, p = 0.6, list = FALSE)
 trainData <- iris[inTrain,]
 testData <- iris[-inTrain,]
@@ -50,191 +89,59 @@ fancyRpartPlot(treeModel$finalModel)
 ```
 
 \newpage
-Alternative visualization of the decision tree
+Visualization of the decision tree
 
 ```{r, echo=FALSE}
-preClassType <- ifelse(trainData$Species == "setosa", 15, 
-                   ifelse(trainData$Species== "versicolor", 17, 19))
-plot(trainData$Petal.Length, trainData$Petal.Width, col = trainData$Species, 
-     pch = preClassType, xlab = "Petal Length", ylab = "Petal Width")
+par(mfrow=c(1,2))
+preClassType <- ifelse(trainData$Species == "setosa", 0, 
+                   ifelse(trainData$Species== "versicolor", 6, 2))
+col <- ifelse(trainData$Species == "setosa", "red", 
+                   ifelse(trainData$Species== "versicolor", "blue", "green"))
+predClass <- predict(treeModel, newdata = trainData)
+predResult <- ifelse(predClass == trainData$Species, "green", "red")
+
+
+plot(trainData$Petal.Length, trainData$Petal.Width, col = predResult, 
+     pch = preClassType, xlab = "Petal Length", ylab = "Petal Width",
+     main = "Training Data")
 abline(v = 2.4)
 segments(2.4, 1.7, 7.2, 1.7 )
-text(x = 2.2, y = 1.1, labels = "Decision Boundary 1", srt = 90)
-text(x = 3.9, y = 1.8, labels = "Decision Boundary 2")
-```
+text(x = 1.5, y = 1.5, labels = "sesota")
+text(x = 3.9, y = 2.0, labels = "virginica")
+text(x = 3.9, y = 0.5, labels = "versicolor")
+legend(x=5,y=0.5, legend = c("correct", "incorrect"), col = c("green", "red"), 
+      lty = c(1,1), cex = 0.50)
 
-
-Visualization of the prediction result
-
-```{r, echo = FALSE}
-predResult <- ifelse(preClass == testData$Species, "green", "red")
-
-preClass <- ifelse(testData$Species == "setosa", 15, 
-                   ifelse(testData$Species== "versicolor", 17, 19))
-
+predClass <- predict(treeModel, newdata = testData)
+preClassType <- ifelse(testData$Species == "setosa", 0, 
+                   ifelse(testData$Species== "versicolor", 6, 2))
+predResult <- ifelse(predClass == testData$Species, "green", "red")
 
 plot(testData$Petal.Length, testData$Petal.Width, col = predResult, 
-     pch = preClass, cex = 1.2, xlab = "Petal Length", ylab = "Petal Width")
+     pch = preClassType, cex = 1.2, xlab = "Petal Length", ylab = "Petal Width",
+     main = "Test Data")
 abline(v = 2.4)
 segments(2.4, 1.7, 7.2, 1.7 )
-text(x = 2.2, y = 1.1, labels = "Decision Boundary 1", srt = 90)
-text(x = 3.9, y = 1.8, labels = "Decision Boundary 2")
-```
+text(x = 1.5, y = 1.5, labels = "setosa")
+text(x = 3.9, y = 2.0, labels = "virginica")
+text(x = 3.9, y = 0.5, labels = "versicolor")
+legend(x=4.5,y=1.0, legend = c("setosa", "versicolor", "virginica"), 
+       pch = c(0,6,2), cex = 0.75)
 
-
-\newpage
-
-## Clustering Example
-### K-means clustering
-
-```{r, echo = FALSE}
-x <- seq(from=1,to=10,length.out = 10)
-set.seed(10)
-y1 <- rnorm(5, 4, 0.5)
-set.seed(20)
-y2 <- rnorm(5, 8, 0.5)
-y <- c(y1,y2)
-obs <- data.frame(x,y)
-```
-
-```{r}
-head(obs)
-```
-
-
-```{r, echo = FALSE}
 par(mfrow=c(1,1))
-plot(x,y, cex = 1.5, pch = 19)
 ```
-
-Create 2 clusters
-
-```{r}
-kmeansObj <-  kmeans(obs, centers = 2)
-data.frame(obs, cluster = kmeansObj$cluster)
-kmeansObj$centers
-```
-
-```{r, echo=FALSE}
-plot(x,y, col= kmeansObj$cluster, pch = 19, cex = 1.5, xlim = c(0,12), ylim = c(0,12))
-points(kmeansObj$centers, pch = 8, cex = 2.0, col = rownames(kmeansObj$centers))
-textxy(x+0.1,y + 0.1, labs = 1:10, cex = 1, col = kmeansObj$cluster)
-```
-
-Create 4 clusters
-
-```{r}
-kmeansObj <-  kmeans(obs, centers = 4)
-data.frame(obs, cluster = kmeansObj$cluster)
-kmeansObj$centers
-```
-
-
-```{r, echo = FALSE}
-par(mfrow=c(1,1))
-plot(x,y, col= kmeansObj$cluster, pch = 19, cex = 1.5, xlim = c(0,12), ylim = c(0,12))
-points(kmeansObj$centers, pch = 8, cex = 2.0, col = rownames(kmeansObj$centers))
-textxy(x+0.1,y + 0.1, labs = 1:10, cex = 1, col = kmeansObj$cluster)
-```
-
-\newpage
-
-### Hierarchical Clustering
-
-```{r, echo = FALSE}
-x <- seq(from=1,to=10,length.out = 10)
-set.seed(10)
-y1 <- rnorm(5, 4, 0.5)
-set.seed(20)
-y2 <- rnorm(5, 8, 0.5)
-y <- c(y1,y2)
-par(mfrow=c(1,1))
-plot(x,y, xlim = c(0,10), ylim = c(0,10), pch = 19)
-```
-
-```{r}
-distM <- dist(obs)
-clusters <- hclust(distM, method = "ward.D")
-```
-
-\newpage
-Create 2 partitions
-
-```{r}
-mem <- cutree(clusters, k =2)
-data.frame(obs, cluster = mem)
-```
-
-```{r, echo=FALSE} 
-par(mfrow=c(1,2))
-plot(clusters)
-abline(h=10)
-text(5, 12, labels = "2 partitions")
-plot(x,y, col=mem, pch = 19, cex = 1.5, xlim = c(0,12), ylim=c(0,12),
-     main="Same color points form a group")
-textxy(x+0.1,y + 0.1, labs = 1:10, cex = 1, col = mem)
-```
-
-\newpage
-
-Create 4 partitions
-
-```{r}
-mem <- cutree(clusters, k =4)
-data.frame(obs, cluster = mem)
-```
-
-```{r, echo=FALSE}
-par(mfrow=c(1,2))
-plot(clusters)
-abline(h=3.5)
-text(5, 5, labels = "4 partitions")
-plot(x,y, col=mem, pch = 19, cex = 1.5, xlim = c(0,12), ylim=c(0,12),
-     main="Same color points form a group")
-textxy(x+0.1,y + 0.1, labs = 1:10, cex = 1, col = mem)
-```
-
-\newpage
-
-## Cross-validation
-
-```{r, echo = FALSE}
-drawPoly <- function(x,y, col){
-  polygon(c(x,x+1,x+1,x, x), c(y,y,y+0.5,y+0.5,y), col = col)
-}
-
-
-plot(1, type="n", axes=F, xlab="", ylab="", xlim = c(0.5,6), ylim= c(0,8),
-     main = "5 fold cross validation illustration")
-for (i in 1:5){
-  for (j in 1:5) {
-    col <- ifelse(i==j, "red", "green")
-    drawPoly(i,j, col)
-  }
-}
-
-drawPoly(1,6, "red")
-drawPoly(1,7, "green")
-
-for(i in 1:5){
-  text(i+0.5, 0.5, label = paste("k = ", i, sep = ""))
-}
-
-for(i in 1:5){
-  text(0.5, i+0.25, label = 6-i)
-}
-
-text(3, 7.3, label = "Training Data")
-text(3, 6.3, label = "Test Data")
-```
-
-\newpage
 
 ## random Forest
 
 
 ### ntree
+```{r, echo=FALSE, fig.width=12}
+include_graphics("randomForest.jpg")
+```
 
+```{r, echo=FALSE, fig.width=12}
+include_graphics("mtry.jpg")
+```
 
 ```{r, echo = FALSE}
 
@@ -449,11 +356,280 @@ symbols(x = unlist(xl), y = unlist(yl),  circles = rep(r,nc),
         bg = "blue", add = TRUE, inches = FALSE)
 arrows(unlist(ax0l), unlist(ay0l), unlist(ax1l), unlist(ay1l), length = 0.1)
 
-
 ```
+
+
+\newpage
+## knn2
+```{r}
+myIris <- iris[,3:5]
+head(myIris)
+nI <- nrow(myIris)
+ind <- sample(1:nI, 0.8*nI)
+trainData <- myIris[ind, 1:2]
+trainClass <- myIris[ind, 3]
+testData <- myIris[-ind, 1:2]
+testClass <- myIris[-ind, 3]
+preClass <- knn(trainData, testData, cl = trainClass, k = 2)
+table(preClass, testClass)
+
+color <- ifelse(trainClass=="setosa", "red", ifelse(trainClass=="versicolor", "green",
+                "blue"))
+
+plot(trainData$Petal.Length, trainData$Petal.Width, pch = 19, col = color,
+     xlab = "Petal.Length", ylab = "Petal.Width")
+legend(x = 1, y = 2.5, legend = c("Setosa", "versicolor", "virginica"),
+       col = c("red", "green", "blue"), pch = 19)
+
+color <- ifelse(preClass=="setosa", "red", ifelse(preClass=="versicolor", "green",
+                "blue"))
+
+pType = ifelse(preClass == testClass, 17, 4)
+points(testData$Petal.Length, testData$Petal.Width, pch = pType, col = color)
+```
+
+
+\newpage
+
+## clustering example
+### kmeans clustering
+```{r}
+myIris <- iris[3:4]
+group <- iris$Species
+predGroup <- kmeans(myIris, centers = 3)
+predGroupC <- ifelse(predGroup$cluster==2, "setosa", ifelse(predGroup$cluster==3, 
+                                                   "versicolor", "virginnica"))
+predGroupC <- factor(predGroupC)
+predGroupC
+table(predGroupC, group)
+
+par(mfrow = c(1,2))
+plot(myIris$Petal.Length, myIris$Petal.Width, pch = 19, col = predGroupC)
+legend(x=1,y=2.5, legend = c("group1", "group2", "group3"), 
+       col = c("green", "black", "red"), pch = 19, y.intersp=0.5, cex = 0.75)
+
+plot(myIris$Petal.Length, myIris$Petal.Width, pch = 17, col = group)
+legend(x=1,y=2.5, legend = c("setosa", "versicolor", "virginica"), 
+       col = c("green", "black", "red"), pch = 19, y.intersp=0.5, cex = 0.75)
+par(mfrow = c(1,1))
+```
+
+### hierarchichal clustering
+```{r}
+group <- iris$Species
+disM <- dist(myIris)
+irisClust <- hclust(disM)
+clusters <- cutree(irisClust, k = 3)
+
+clusters <- ifelse(clusters==1, "setosa", ifelse(clusters==2, 
+                                                   "virginnica", "versicolor"))
+clusters <- factor(clusters)
+clusters
+table(clusters, group)
+
+par(mfrow = c(1,2))
+plot(myIris$Petal.Length, myIris$Petal.Width, pch = 19, col = predGroupC)
+legend(x=1,y=2.5, legend = c("group1", "group2", "group3"), 
+       col = c("green", "black", "red"), pch = 19, y.intersp=0.5, cex = 0.75)
+
+plot(myIris$Petal.Length, myIris$Petal.Width, pch = 17, col = group)
+legend(x=1,y=2.5, legend = c("setosa", "versicolor", "virginica"), 
+       col = c("green", "black", "red"), pch = 19, y.intersp=0.5, cex = 0.75)
+par(mfrow = c(1,1))
+```
+
+
+## Clustering Example
+### K-means clustering
+
+```{r, echo = FALSE}
+x <- seq(from=1,to=10,length.out = 10)
+set.seed(10)
+y1 <- rnorm(5, 4, 0.5)
+set.seed(20)
+y2 <- rnorm(5, 8, 0.5)
+y <- c(y1,y2)
+obs <- data.frame(x,y)
+```
+
+```{r}
+head(obs)
+```
+
+
+```{r, echo = FALSE}
+par(mfrow=c(1,1))
+plot(x,y, cex = 1.5, pch = 19)
+```
+
+Create 2 clusters
+
+```{r}
+kmeansObj <-  kmeans(obs, centers = 2)
+data.frame(obs, cluster = kmeansObj$cluster)
+kmeansObj$centers
+```
+
+```{r, echo=FALSE}
+plot(x,y, col= kmeansObj$cluster, pch = 19, cex = 1.5, xlim = c(0,12), ylim = c(0,12))
+points(kmeansObj$centers, pch = 8, cex = 2.0, col = rownames(kmeansObj$centers))
+textxy(x+0.1,y + 0.1, labs = 1:10, cex = 1, col = kmeansObj$cluster)
+```
+
+Create 4 clusters
+
+```{r}
+kmeansObj <-  kmeans(obs, centers = 4)
+data.frame(obs, cluster = kmeansObj$cluster)
+kmeansObj$centers
+```
+
+
+```{r, echo = FALSE}
+par(mfrow=c(1,1))
+plot(x,y, col= kmeansObj$cluster, pch = 19, cex = 1.5, xlim = c(0,12), ylim = c(0,12))
+points(kmeansObj$centers, pch = 8, cex = 2.0, col = rownames(kmeansObj$centers))
+textxy(x+0.1,y + 0.1, labs = 1:10, cex = 1, col = kmeansObj$cluster)
+```
+
+\newpage
+
+### Hierarchical Clustering
+
+```{r, echo = FALSE}
+x <- seq(from=1,to=10,length.out = 10)
+set.seed(10)
+y1 <- rnorm(5, 4, 0.5)
+set.seed(20)
+y2 <- rnorm(5, 8, 0.5)
+y <- c(y1,y2)
+par(mfrow=c(1,1))
+plot(x,y, xlim = c(0,10), ylim = c(0,10), pch = 19)
+```
+
+```{r}
+distM <- dist(obs)
+clusters <- hclust(distM, method = "ward.D")
+```
+
+\newpage
+Create 2 partitions
+
+```{r}
+mem <- cutree(clusters, k =2)
+data.frame(obs, cluster = mem)
+```
+
+```{r, echo=FALSE} 
+par(mfrow=c(1,2))
+plot(clusters)
+abline(h=10)
+text(5, 12, labels = "2 partitions")
+plot(x,y, col=mem, pch = 19, cex = 1.5, xlim = c(0,12), ylim=c(0,12),
+     main="Same color points form a group")
+textxy(x+0.1,y + 0.1, labs = 1:10, cex = 1, col = mem)
+```
+
+\newpage
+
+Create 4 partitions
+
+```{r}
+mem <- cutree(clusters, k =4)
+data.frame(obs, cluster = mem)
+```
+
+```{r, echo=FALSE}
+par(mfrow=c(1,2))
+plot(clusters)
+abline(h=3.5)
+text(5, 5, labels = "4 partitions")
+plot(x,y, col=mem, pch = 19, cex = 1.5, xlim = c(0,12), ylim=c(0,12),
+     main="Same color points form a group")
+textxy(x+0.1,y + 0.1, labs = 1:10, cex = 1, col = mem)
+```
+
+\newpage
+
+## Cross-validation
+
+```{r, echo = FALSE}
+drawPoly <- function(x,y, col){
+  polygon(c(x,x+1,x+1,x, x), c(y,y,y+0.5,y+0.5,y), col = col)
+}
+
+
+plot(1, type="n", axes=F, xlab="", ylab="", xlim = c(0.5,6), ylim= c(0,8),
+     main = "5 fold cross validation illustration")
+for (i in 1:5){
+  for (j in 1:5) {
+    col <- ifelse(i==j, "red", "green")
+    drawPoly(i,j, col)
+  }
+}
+
+drawPoly(1,6, "red")
+drawPoly(1,7, "green")
+
+for(i in 1:5){
+  text(i+0.5, 0.5, label = paste("k = ", i, sep = ""))
+}
+
+for(i in 1:5){
+  text(0.5, i+0.25, label = 6-i)
+}
+
+text(3, 7.3, label = "Training Data")
+text(3, 6.3, label = "Test Data")
+```
+
+\newpage
+
 
 
 
 ```{r}
-rfModel <- randomForest(Species ~ . , data = trainData, ntree = 3)
+#rfModel <- randomForest(Species ~ . , data = trainData, ntree = 3)
 ```
+
+## knn
+```{r}
+head(trees)
+set.seed(100)
+index <- sample(nrow(iris), 0.6*nrow(iris))
+p <- knn(iris[index, 1:4], iris[-index, 1:4], iris[index, 5], 1)
+data.frame(iris[-index, 5], p)
+table(iris[-index, 5], p)
+## show cross validation
+## show parameter selection
+## show visualization
+```
+
+
+## knn2
+```{r}
+head(trees)
+set.seed(100)
+index <- sample(nrow(trees), 0.6*nrow(trees))
+p <- knn(trees[index, 1:2], trees[-index, 1:2], iris[index, 3], 4)
+data.frame(trees[-index, 3], p)
+```
+
+
+## baye's theorem
+```{r}
+head(Titanic)
+```
+
+
+## svm
+```{r}
+#svmModel <- svm()
+```
+
+
+
+
+
+
+
