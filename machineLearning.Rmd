@@ -15,6 +15,7 @@ library(randomForest)
 library(e1071)
 library(class)
 library(knitr)
+library(party)
 ```
 
 ## Decision Tree Example
@@ -100,13 +101,26 @@ par(mfrow=c(1,1))
 
 
 ### ntree
-```{r, echo=FALSE, fig.width=12}
-include_graphics("randomForest.jpg")
+```{r, echo=FALSE}
+include_graphics("rf.png")
 ```
 
 ### mtry
 ```{r, echo=FALSE, fig.width=12}
 include_graphics("mtry.jpg")
+```
+
+### random forest example
+```{r}
+set.seed(100)
+inTrain <- createDataPartition(iris[,5], p = 0.6, list=FALSE)
+trainData <- iris[inTrain,]
+testData <- iris[-inTrain, 1:4]
+testClass <- iris[-inTrain, 5]
+
+rfModel <- randomForest(Species ~ ., data=iris, mtry=3, ntree=10)
+predClass <- predict(rfModel, newdata = testData)
+table(predClass, testClass)
 ```
 
 
