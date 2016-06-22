@@ -83,8 +83,8 @@ identifies the best model that contains a given number of predictors, where best
 ```{r}
 fwdSelection <- regsubsets(mpg ~ ., data = mtcars, method = "forward")
 sumFwdSel <- summary(fwdSelection)
-sumFwdSel
 names(sumFwdSel)
+sumFwdSel$outmat
 sumFwdSel$rsq
 which.max(sumFwdSel$adjr2)
 coef(fwdSelection,6)
@@ -94,44 +94,42 @@ coef(fwdSelection,6)
  + Use backward selection model to find the best model for mpg
 
 ## Tree based algorithm
-### Problem Description
-Given a data set that contains some observation and corresponding class label, can a machine learning algorithm be trained to determine the class label of any data set (not necessarily the data that was used for training) from its observation
+Used both for classification and regression
 
-### Solution using decision tree
+### Problem Description
+Use Iris dataset to predict the Species based on Sepal.Length, Sepal.Width, Petal.Length,
+Petal.Width
+
+
 ```{r}
 head(iris)
 ```
 
-Create data partition
-```{r}
+
+```{r, echo=FALSE, results='hide'}
 set.seed(100)
 inTrain <- createDataPartition(iris$Species, p = 0.6, list = FALSE)
 trainData <- iris[inTrain,]
 testData <- iris[-inTrain,1:4]
 testClass <- iris[-inTrain,5]
-```
 
-Build a decision tree model and use it for prediction on test data set
-```{r}
 treeModel <- train(Species ~ ., data = trainData, method = "rpart")
 predClass <- predict(treeModel, newdata = testData)
 cMatrix <- confusionMatrix(predClass, testClass)
 cMatrix$table
-```
 
-Look at what are the important variables
-```{r}
 varImp(treeModel)
 ```
 
-Visualization of the decision tree
+Decision tree: splitting rule
 
 ```{r, echo=FALSE}
 fancyRpartPlot(treeModel$finalModel)  
 ```
 
 \newpage
-Visualization of the decision tree
+
+Decision tree: partitioned area
 
 ```{r, echo=FALSE}
 par(mfrow=c(1,2))
@@ -173,6 +171,29 @@ legend(x=4.5,y=0.6, legend = c("setosa", "versicolor", "virginica"),
 par(mfrow=c(1,1))
 ```
 
+
+Create data partition
+```{r}
+set.seed(100)
+inTrain <- createDataPartition(iris$Species, p = 0.6, list = FALSE)
+trainData <- iris[inTrain,]
+testData <- iris[-inTrain,1:4]
+testClass <- iris[-inTrain,5]
+```
+
+Build a decision tree model and use it for prediction on test data set
+```{r}
+treeModel <- train(Species ~ ., data = trainData, method = "rpart")
+predClass <- predict(treeModel, newdata = testData)
+cMatrix <- confusionMatrix(predClass, testClass)
+cMatrix$table
+```
+
+Look at what are the important variables
+```{r}
+varImp(treeModel)
+```
+
 ### Add some challenge
 
 ### Advantages of decision tree
@@ -193,6 +214,10 @@ include_graphics("rf.png")
 ```
 
 ### mtry
+Decorrelate the trees
+a random sample of m predictors is chosen as split candidates from the full set of 
+p predictors.
+
 ```{r, echo=FALSE, fig.width=12}
 include_graphics("mtry.jpg")
 ```
@@ -202,7 +227,7 @@ include_graphics("mtry.jpg")
 rfModel <- randomForest(Species ~ ., data=trainData, mtry=3, ntree=15)
 predClass <- predict(rfModel, newdata = testData)
 table(predClass, testClass)
-rfModel$importance
+varImpPlot(rfModel)
 ```
 
 ### Add some challenge
@@ -219,10 +244,12 @@ include_graphics("boosting.png")
 #gbmModel <- gbm(Species ~ ., data = trainData, distribution = "multinomial", 
 #                n.trees = 20)
 #predict(gbmModel, newdata = testData, single.tree = TRUE, n.trees = 20, type = "response")
+
+
+# boost.boston=gbm(medv~.,data=Boston[train,],distribution= # #"gaussian",n.trees=5000,interaction.depth=4)
 ```
 
-
-
+The argument n.teees = 5000 indicates that we want 5000 trees, and the option interaction.depth = 4 limits the depth of each tree
 
 ## knn
 ```{r}
@@ -261,47 +288,61 @@ points(testData$Petal.Length, testData$Petal.Width, pch = pType, col = color)
 
 ## clustering example
 ### kmeans clustering
-```{r}
-myIris <- iris[3:4]
-group <- iris$Species
-predGroup <- kmeans(myIris, centers = 3)
-predGroupC <- ifelse(predGroup$cluster==2, "setosa", ifelse(predGroup$cluster==3, 
+```{r, echo=FALSE}
+set.seed(100)
+index <- sample(c(TRUE, FALSE), nrow(iris), p = c(0.2, 0.6), replace = TRUE)
+myIris <- iris[index,3:4]
+group <- iris$Species[index]
+set.seed(100)
+predGroup <- kmeans(myIris, centers = 3, nstart = 10)
+predGroupC <- ifelse(predGroup$cluster==1, "setosa", ifelse(predGroup$cluster==2, 
                                                    "versicolor", "virginnica"))
 predGroupC <- factor(predGroupC)
 table(predGroupC, group)
 
 par(mfrow = c(1,2))
-plot(myIris$Petal.Length, myIris$Petal.Width, pch = 19, col = predGroupC)
+col <- ifelse(predGroupC == "setosa", "green", 
+              ifelse(predGroupC=="versicolor", "red", "blue"))
+plot(myIris$Petal.Length, myIris$Petal.Width, pch = 19, col = col)
 legend(x=1,y=2.5, legend = c("group1", "group2", "group3"), 
-       col = c("green", "black", "red"), pch = 19, y.intersp=0.5, cex = 0.75)
+       col = c("green", "red", "blue"), pch = 19, y.intersp=0.75, cex = 0.75,
+       bty = "n")
 
-plot(myIris$Petal.Length, myIris$Petal.Width, pch = 17, col = group)
+col <- ifelse(group == "setosa", "green", ifelse(group=="versicolor", "red", "blue"))
+plot(myIris$Petal.Length, myIris$Petal.Width, pch = 17, col = col)
 legend(x=1,y=2.5, legend = c("setosa", "versicolor", "virginica"), 
-       col = c("green", "black", "red"), pch = 19, y.intersp=0.5, cex = 0.75)
+       col = c("green", "red", "blue"), pch = 17, y.intersp=0.75, cex = 0.75,
+       bty = "n")
 par(mfrow = c(1,1))
 ```
 
 ### hierarchichal clustering
-```{r}
-group <- iris$Species
+```{r, echo=FALSE}
 disM <- dist(myIris)
 irisClust <- hclust(disM)
 clusters <- cutree(irisClust, k = 3)
 
 clusters <- ifelse(clusters==1, "setosa", ifelse(clusters==2, 
-                                                   "virginnica", "versicolor"))
+                                                   "versicolor", "virginnica"))
 clusters <- factor(clusters)
 
-
+col <- ifelse(clusters == "setosa", "green", 
+              ifelse(clusters=="versicolor", "red", "blue"))
 par(mfrow = c(1,2))
-plot(myIris$Petal.Length, myIris$Petal.Width, pch = 19, col = predGroupC)
+plot(myIris$Petal.Length, myIris$Petal.Width, pch = 19, col = col)
 legend(x=1,y=2.5, legend = c("group1", "group2", "group3"), 
-       col = c("green", "black", "red"), pch = 19, y.intersp=0.5, cex = 0.75)
+       col = c("green", "red", "blue"), pch = 19, y.intersp=0.5, 
+       cex = 0.75, bty = "n")
 
-plot(myIris$Petal.Length, myIris$Petal.Width, pch = 17, col = group)
+col <- ifelse(group == "setosa", "green", ifelse(group=="versicolor", "red", "blue"))
+plot(myIris$Petal.Length, myIris$Petal.Width, pch = 17, col = col)
 legend(x=1,y=2.5, legend = c("setosa", "versicolor", "virginica"), 
-       col = c("green", "black", "red"), pch = 19, y.intersp=0.5, cex = 0.75)
+       col = c("green", "red", "blue"), pch = 17, y.intersp=0.5, 
+       cex = 0.75, bty = "n")
 par(mfrow = c(1,1))
+plot(irisClust)
+plot(myIris$Petal.Length, myIris$Petal.Width, pch = ".")
+text(myIris$Petal.Length, myIris$Petal.Width, labels = which(index==TRUE))
 ```
 
 
