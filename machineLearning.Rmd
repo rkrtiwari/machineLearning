@@ -4,49 +4,55 @@ author: "Ravi Kumar Tiwari"
 date: "14 June 2016"
 output: pdf_document
 ---
+## Introduction
+1. What is machine learning
+2. Why is it important (some applications)
+3. Some good motivation examples
 
-
-```{r, echo = TRUE, results='hide', message=FALSE, warning=FALSE}
+```{r, echo = FALSE, results='hide', message=FALSE, warning=FALSE}
 library(caret)
-library(rpart.plot)
 library(rattle)
 library(calibrate)
-library(randomForest)
 library(e1071)
-library(class)
 library(knitr)
 library(party)
 library(ada)
 library(gbm)
-library(leaps)
 ```
 
 ## Regression
 
-Used for predicting continuous variable
+### Working principle
+We find a line that best describes the data. 
 
-1. Code to Build the model object
+### Example
+Build a linear model to describe the relationship between mpg (miles per gallon) and wt (weight of the car) in the mtcars dataset
 
-```{r}
+```{r, echo=FALSE}
 lmModel <- lm(mpg ~ wt, data = mtcars)
+plot(mtcars$wt, mtcars$mpg, xlab="wt", ylab="mpg", col = "blue", pch = 20)
+abline(lmModel)
 ```
 
-2. Code to obtain the model parameters
+### Codes
 
-```{r}
+
+```{r, results='hide'}
+## Build the linear model object
+lmModel <- lm(mpg ~ wt, data = mtcars)
+
+## Obtain the model parameters
 sumModel <- summary(lmModel)
 sumModel$coefficients
-```
 
-3. Prediction of response using the regression model
-
-```{r}
+## Prediction using the model
 predValue <- predict(lmModel, data.frame(wt = mtcars$wt))
 ```
 
-4. Assessing the accuracy of the model
 
-  + Visual Inspection
+### Model Assessment 
+
+1. Visual Inspection
 
 ```{r, echo=FALSE}
 plot(mtcars$wt, mtcars$mpg, xlab="wt", ylab="mpg", col = "blue")
@@ -55,32 +61,31 @@ segments(mtcars$wt, predValue, mtcars$wt, mtcars$mpg, col="red")
 legend(x=4.0,y=30, legend = c("residual"), lty=1, col = "red")
 ```
 
-  + R-squared value
+2. R-squared value
 
 ```{r}
 sumModel <- summary(lmModel)
 sumModel$r.squared
-
 ```
 
-  + F-statistics
+3. F-statistics
 
 ```{r}
 sumModel$fstatistic
 ```
 
-5. Code to build linear regression model using multiple predictors
+### Extension of linear model 
 
-```{r}
+```{r, results='hide', message=FALSE, warning=FALSE}
+## More than one predictors
 lmModel2 <- lm(mpg ~ wt+hp+disp, data = mtcars) # wt, hp, and disp will be used as predictor
 lmModel3  <- lm(mpg~ ., data = mtcars)   # All the variable will be used
-```
 
-6. Code to do subset selection
+## subset selection
+## Identify the best model that contains a given number of predictor, where best is 
+## quantified using RSS
 
-identifies the best model that contains a given number of predictors, where best is quantified using RSS
-
-```{r}
+library(leaps)
 fwdSelection <- regsubsets(mpg ~ ., data = mtcars, method = "forward")
 sumFwdSel <- summary(fwdSelection)
 names(sumFwdSel)
@@ -90,109 +95,140 @@ which.max(sumFwdSel$adjr2)
 coef(fwdSelection,6)
 ```
 
-7. Challenge
- + Use backward selection model to find the best model for mpg
+
+### Challenge
+Use backward selection model to find the best model for mpg
+
+\newpage
 
 ## Tree based algorithm
 Used both for classification and regression
 
-### Problem Description
-Use Iris dataset to predict the Species based on Sepal.Length, Sepal.Width, Petal.Length,
-Petal.Width
+### Workign principle
+Divide the data set into several small regions such that the response variables are homogeneous in those regions. The predictd value of a new observation is the most dominant class of the region to which the observation belongs. 
+
+
+### Example
+Find the decision rule to predict the species of iris dataset based on Sepal.Length, Sepal.Width, Petal.Length, and Petal.Width
 
 
 ```{r}
-head(iris)
+iris[c(1,100,150),]
 ```
 
+### Decision Tree visualization
 
-```{r, echo=FALSE, results='hide'}
-set.seed(100)
-inTrain <- createDataPartition(iris$Species, p = 0.6, list = FALSE)
+```{r, echo = FALSE, results='hide', message=FALSE, warning=FALSE}
+library(rpart)
+library(rpart.plot)
+
+## create the tree model
+set.seed(1)
+inTrain <- sample(c(TRUE, FALSE), size = nrow(iris), replace = TRUE, prob = c(0.6,0.4))
 trainData <- iris[inTrain,]
-testData <- iris[-inTrain,1:4]
-testClass <- iris[-inTrain,5]
+testData <- iris[!inTrain,1:4]
+testClass <- iris[!inTrain,5]
 
-treeModel <- train(Species ~ ., data = trainData, method = "rpart")
-predClass <- predict(treeModel, newdata = testData)
-cMatrix <- confusionMatrix(predClass, testClass)
-cMatrix$table
+treeModel <- rpart(Species ~ ., data = trainData)
+predClass <- predict(treeModel, newdata = testData, type = "class")
 
-varImp(treeModel)
+## Plot the tree
+par(mfrow=c(1,2))
+### Decision tree Plot
+rpart.plot(treeModel, type = 0)
+
+### Decision area plot
+col <- ifelse(trainData$Species == "setosa", "red", 
+                   ifelse(trainData$Species== "virginica", "green", "blue"))
+pty <- ifelse(trainData$Species == "setosa", 8, 
+                   ifelse(trainData$Species== "virginica", 3, 4))
+
+plot(trainData$Petal.Length, trainData$Petal.Width, col = col, 
+     pch = pty, xlab = "Petal Length", ylab = "Petal Width",
+     cex=0.5)
+
+abline(v = 2.6)
+segments(2.6, 1.75, 7.2, 1.75)
+text(x = 1.52, y = 1.5, labels = "sesota", cex = 0.75)
+text(x = 3.6, y = 2.0, labels = "virginica", cex = 0.75)
+text(x = 3.9, y = 0.8, labels = "versicolor", cex = 0.75)
+legend(x=4.6,y=0.75, legend = c("setosa", "versicolor" , "virginica"), 
+       col = c("red", "blue", "green"), 
+      pch = c(8,4,3), cex = 0.75, bty = "n")
+
 ```
 
-Decision tree: splitting rule
+### Codes
+```{r, results='hide'}
+## Load the required libraries
+library(rpart)
+library(rpart.plot)
 
-```{r, echo=FALSE}
-fancyRpartPlot(treeModel$finalModel)  
+## create the data partition
+set.seed(1)
+inTrain <- sample(c(TRUE, FALSE), size = nrow(iris), replace = TRUE, prob = c(0.6,0.4))
+trainData <- iris[inTrain,]
+testData <- iris[!inTrain,1:4]
+testClass <- iris[!inTrain,5]
+
+## Create the tree model
+treeModel <- rpart(Species ~ ., data = trainData)
+
+## Use the tree model to predict the class of the test data
+predTrainClass <- predict(treeModel, newdata = trainData, type = "class")
+predTestClass <- predict(treeModel, newdata = testData, type = "class")
+
+## Find out the performance of the decision tree
+table(predTrainClass, trainData$Species)
+table(predTestClass, testClass)
 ```
 
 \newpage
 
-Decision tree: partitioned area
+### Decision tree prediction visualization
 
 ```{r, echo=FALSE}
 par(mfrow=c(1,2))
-preClassType <- ifelse(trainData$Species == "setosa", 3, 
-                   ifelse(trainData$Species== "versicolor", 4, 8))
+## Plot train data
 col <- ifelse(trainData$Species == "setosa", "red", 
                    ifelse(trainData$Species== "versicolor", "blue", "green"))
-predClass <- predict(treeModel, newdata = trainData)
-predResult <- ifelse(predClass == trainData$Species, "green", "red")
 
+pty <- ifelse(trainData$Species == "setosa", 8, 
+                   ifelse(trainData$Species== "virginica", 3, 4))
 
-plot(trainData$Petal.Length, trainData$Petal.Width, col = predResult, 
-     pch = preClassType, xlab = "Petal Length", ylab = "Petal Width",
-     main = "Training Data", cex=0.5)
-abline(v = 2.4)
-segments(2.4, 1.7, 7.2, 1.7 )
+plot(trainData$Petal.Length, trainData$Petal.Width, col = col, 
+     pch = pty, xlab = "Petal Length", ylab = "Petal Width",
+     main = "Training Data", cex=0.5, xlim = c(0.7,7.2), ylim = c(0,2.6))
+abline(v = 2.6, lwd = 0.3)
+segments(2.6, 1.75, 7.4, 1.75, lwd = 0.3)
 text(x = 1.52, y = 1.5, labels = "sesota", cex = 0.75)
 text(x = 3.6, y = 2.0, labels = "virginica", cex = 0.75)
 text(x = 3.9, y = 0.8, labels = "versicolor", cex = 0.75)
-legend(x=4.6,y=0.5, legend = c("correct", "incorrect"), col = c("green", "red"), 
-      pch = 20, cex = 0.75, bty = "n")
+legend(x=5.0,y=0.7, legend = c("setosa", "versicolor", "virginica"), 
+       col = c("red", "blue", "green"), 
+      pch = c(8,4,3), cex = 0.5, bty = "n")
 
-predClass <- predict(treeModel, newdata = testData)
-preClassType <- ifelse(testClass == "setosa", 3, 
-                   ifelse(testClass== "versicolor", 4, 8))
-predResult <- ifelse(predClass == testClass, "green", "red")
+# Plot test data
+predClass <- predict(treeModel, newdata = testData, type = "class")
+col <- ifelse(testClass == "setosa", "red", 
+                   ifelse(testClass == "versicolor", "blue", "green"))
+pty <- ifelse(testClass == "setosa", 8, 
+                   ifelse(testClass== "virginica", 3, 4))
 
-plot(testData$Petal.Length, testData$Petal.Width, col = predResult, 
-     pch = preClassType, cex = 0.5, xlab = "Petal Length", ylab = "Petal Width",
-     main = "Test Data")
-abline(v = 2.4)
-segments(2.4, 1.7, 7.2, 1.7 )
+plot(testData$Petal.Length, testData$Petal.Width, col = col, 
+     pch = pty, cex = 0.5, xlab = "Petal Length", ylab = "Petal Width",
+     main = "Test Data", xlim = c(0.7,7.2), ylim = c(0,2.6))
+abline(v = 2.6, lwd = 0.3)
+segments(2.6, 1.75, 7.4, 1.75, lwd = 0.3)
 text(x = 1.52, y = 1.5, labels = "setosa", cex = 0.75)
 text(x = 3.6, y = 2.0, labels = "virginica", cex = 0.75)
 text(x = 3.9, y = 0.8, labels = "versicolor", cex = 0.75)
-legend(x=4.5,y=0.6, legend = c("setosa", "versicolor", "virginica"), 
-       pch = c(3,4,8), cex = 0.75, bty = "n")
-
+legend(x=5.0,y=0.7, legend = c("setosa", "versicolor", "virginica"), 
+       col = c("red", "blue", "green"),
+       pch = c(8,4,3), cex = 0.5, bty = "n")
 par(mfrow=c(1,1))
 ```
 
-
-Create data partition
-```{r}
-set.seed(100)
-inTrain <- createDataPartition(iris$Species, p = 0.6, list = FALSE)
-trainData <- iris[inTrain,]
-testData <- iris[-inTrain,1:4]
-testClass <- iris[-inTrain,5]
-```
-
-Build a decision tree model and use it for prediction on test data set
-```{r}
-treeModel <- train(Species ~ ., data = trainData, method = "rpart")
-predClass <- predict(treeModel, newdata = testData)
-cMatrix <- confusionMatrix(predClass, testClass)
-cMatrix$table
-```
-
-Look at what are the important variables
-```{r}
-varImp(treeModel)
-```
 
 ### Add some challenge
 
@@ -223,7 +259,8 @@ include_graphics("mtry.jpg")
 ```
 
 ### random forest example
-```{r}
+```{r, message=FALSE, warning=FALSE}
+library(randomForest)
 rfModel <- randomForest(Species ~ ., data=trainData, mtry=3, ntree=15)
 predClass <- predict(rfModel, newdata = testData)
 table(predClass, testClass)
@@ -251,38 +288,94 @@ include_graphics("boosting.png")
 
 The argument n.teees = 5000 indicates that we want 5000 trees, and the option interaction.depth = 4 limits the depth of each tree
 
-## knn
-```{r}
-myIris <- iris[,3:5]
-head(myIris)
+\newpage
 
-inTrain <- createDataPartition(myIris$Species, p = 0.6, list = FALSE)
+## knn
+make sure, you scale the data and also with an example tell why  it is important to 
+scale the data
+
+### Working principle
+Members of a given class have similar characteristics. So, a given observation is assigned the class of its nearest neighbours (number of nearest neighbour to be decided by the user)
+
+Example
+
+```{r, echo = FALSE, message=FALSE, warning=FALSE}
+library(class)
+myIris <- iris[,3:5]
+
+set.seed(100)
+inTrain <- sample(c(TRUE, FALSE), size = nrow(myIris), replace = TRUE, prob = c(0.2,0.8))
 trainData <- myIris[inTrain,1:2]
 trainClass <- myIris[inTrain,3]
 testData <- myIris[-inTrain,1:2]
 testClass <- myIris[-inTrain,3]
 
-predClass <- knn(trainData, testData, cl = trainClass, k = 3)
-table(predClass, testClass)
-```
-
-
-```{r, echo=FALSE}
 color <- ifelse(trainClass=="setosa", "red", ifelse(trainClass=="versicolor", "green",
                 "blue"))
 
 plot(trainData$Petal.Length, trainData$Petal.Width, pch = 19, col = color,
      xlab = "Petal.Length", ylab = "Petal.Width")
-legend(x = 1, y = 2.5, legend = c("Setosa", "versicolor", "virginica"),
-       col = c("red", "green", "blue"), pch = 19)
+legend(x = 1.2, y = 2.5, legend = c("setosa", "versicolor", "virginica", "test data"),
+       col = c("red", "green", "blue","black"), pch = c(19,19,19,8), bty = "n", cex=0.75)
+
+
+testData <- data.frame(Petal.Length = 5.0, Petal.Width = 1.0)
+predClass <- knn(trainData, testData, cl = trainClass, k = 3)
+#table(predClass, testClass)
 
 color <- ifelse(predClass=="setosa", "red", ifelse(predClass=="versicolor", "green",
                 "blue"))
 
 pType = ifelse(predClass == testClass, 17, 4)
-points(testData$Petal.Length, testData$Petal.Width, pch = pType, col = color)
+points(testData$Petal.Length, testData$Petal.Width, pch = 8, col = color)
+
+newData <- rbind(testData, trainData)
+distM <- as.matrix(dist(newData))
+rowNames <- names(sort(distM[,1]))[2:4]
+nn <- trainData[rowNames,]
+
+i = 1
+for (i in 1:3){
+  segments(testData[,1], testData[,2], nn[i,1], nn[i,2], lty = 2 )
+}
+
+
+testData <- data.frame(Petal.Length = 2.0, Petal.Width = 0.9)
+predClass <- knn(trainData, testData, cl = trainClass, k = 3)
+
+
+color <- ifelse(predClass=="setosa", "red", ifelse(predClass=="versicolor", "green",
+                "blue"))
+
+pType = ifelse(predClass == testClass, 17, 4)
+points(testData$Petal.Length, testData$Petal.Width, pch = 8, col = color)
+
+newData <- rbind(testData, trainData)
+distM <- as.matrix(dist(newData))
+rowNames <- names(sort(distM[,1]))[2:4]
+nn <- trainData[rowNames,]
+
+i = 1
+for (i in 1:3){
+  segments(testData[,1], testData[,2], nn[i,1], nn[i,2], lty = 2 )
+}
 ```
 
+code
+
+```{r}
+library(class)
+myIris <- iris[,3:5]
+
+inTrain <- sample(c(TRUE, FALSE), size = nrow(myIris), replace = TRUE, prob = c(0.8,0.2))
+trainData <- myIris[inTrain,1:2]
+trainClass <- myIris[inTrain,3]
+testData <- myIris[!inTrain,1:2]
+testClass <- myIris[!inTrain,3]
+
+predClass <- knn(trainData, testData, cl = trainClass, k = 3)
+table(predClass, testClass)
+```
 
 \newpage
 
