@@ -122,8 +122,20 @@ Use backward selection model to find the best model for mpg
 ### logistic regression
 ### Codes
 ```{r, results='hide'}
-#glmModel <- glm(Species~., data = trainData, family = "binomial")
-#predValue <- predict(glmModel, testData, type = "response")
+inSetosa <- iris$Species == "setosa"
+myIris <- iris[!inSetosa,]
+head(myIris)
+glmModel <- glm(Species~Petal.Width, data = myIris, family = binomial(link="logit"))
+predValue <- predict(glmModel, myIris, type = "response")
+predValue
+plot(myIris$Petal.Width,predValue, col = myIris$Species)
+
+glmModel <- glm(Species ~ Petal.Length, data = myIris, family = binomial(link="logit"))
+predValue <- predict(glmModel, myIris, type = "response")
+predValue
+plot(myIris$Petal.Length,predValue, col = myIris$Species, pch = 19)
+legend(x=3, y = 0.8, legend = c("versicolor", "virginica"), pch = 19, col=c("red", "green"))
+
 ```
 
 \newpage
