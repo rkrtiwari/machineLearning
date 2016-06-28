@@ -586,7 +586,8 @@ text(3, 6.3, label = "Test Data")
 
 \newpage
 
-## baye's theorem
+## Bay
+'s theorem
 ```{r}
 #head(Titanic)
 ```
@@ -604,18 +605,52 @@ library(e1071)
 inSetosa <- iris$Species == "setosa"
 myIris <- iris[!inSetosa, c("Petal.Length", "Petal.Width", "Species")]
 myIris$Species <- factor(myIris$Species, levels = c("versicolor", "virginica"))
+svmModel <- svm(Species ~ ., data = myIris, kernal = "linear", 
+                scale = FALSE)
 
-svmModel <- svm(Species ~ ., data = myIris, kernal = "linear", scale = TRUE)
-w <- t(svmModel$coefs) %*% svmModel$SV
-b <- -svmModel$rho
-
-sym <- ifelse(myIris$Species == "versicolor", "+", "x")
+sym <- ifelse(myIris$Species == "versicolor", 15, 16)
 col <- ifelse(myIris$Species == "versicolor", "red", "green")
 
-plot(scale(myIris$Petal.Length), scale(myIris$Petal.Width), pch = sym, col = col)
-abline(a = -b/w[1,2], b = -w[1,1]/w[1,2], col = "blue", lty = 1)
-legend(x=-2.45, y = 1.85, legend = c("versicolor", "virginica", "decision boundary"), pch = c("+", "x", "_"), col = c("red", "green", "blue"), bty = "n")
+x1val <- seq(0.5,8,length.out = 200)
+x2val <- seq(0.5,8, length.out = 200)
+
+xval <- data.frame(expand.grid(x1val, x2val))
+names(xval) <- c("Petal.Length", "Petal.Width")
+yval <- predict(svmModel, xval)
+pcol <- ifelse(yval=="versicolor", "red", "green")
+plot(myIris$Petal.Length, myIris$Petal.Width, pch = sym, col = col, asp = 1,
+     main = "Linear Decision Boundary")
+points(xval, col = pcol, cex = 0.02)
+
+legend(x=3, y = 2.5, legend = c("versicolor", "virginica"), pch = c(15,16), col = c("red", "green"), bty = "n")
 ```
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+library(e1071)
+inSetosa <- iris$Species == "setosa"
+myIris <- iris[!inSetosa, c("Petal.Length", "Petal.Width", "Species")]
+myIris$Species <- factor(myIris$Species, levels = c("versicolor", "virginica"))
+svmModel <- svm(Species ~ ., data = myIris, kernal = "radial", cost = 1e5,
+                scale = FALSE)
+
+sym <- ifelse(myIris$Species == "versicolor", 15, 16)
+col <- ifelse(myIris$Species == "versicolor", "red", "green")
+
+x1val <- seq(0.5,8,length.out = 200)
+x2val <- seq(0.5,8, length.out = 200)
+
+xval <- data.frame(expand.grid(x1val, x2val))
+names(xval) <- c("Petal.Length", "Petal.Width")
+yval <- predict(svmModel, xval)
+pcol <- ifelse(yval=="versicolor", "red", "green")
+plot(myIris$Petal.Length, myIris$Petal.Width, pch = sym, col = col, asp = 1,
+     main = "Non-Linear Decision Boundary")
+points(xval, col = pcol, cex = 0.02)
+
+legend(x=3, y = 2.5, legend = c("versicolor", "virginica"), pch = c(15,16), col = c("red", "green"), bty = "n")
+```
+
+
 
 ### Codes 
 ```{r, message=FALSE, warning=FALSE, results='hide'}
@@ -624,7 +659,7 @@ inSetosa <- iris$Species == "setosa"
 myIris <- iris[!inSetosa, c("Petal.Length", "Petal.Width", "Species")]
 myIris$Species <- factor(myIris$Species, levels = c("versicolor", "virginica"))
 svmModel <- svm(Species ~ ., data = myIris, kernal = "linear", 
-                scale = TRUE)
+                scale = FALSE)
 summary(svmModel)
 prediction <- predict(svmModel, myIris[, 1:2])
 table(prediction, myIris$Species)
