@@ -12,6 +12,7 @@ output: pdf_document
     + Unsupervised learning
 
 3. Machine Learning in Everday life:
+    + Forecasting
     + Spam filtering
     + Product recommendation
     + Fraud detection
@@ -24,7 +25,7 @@ output: pdf_document
 library(caret)
 library(rattle)
 library(calibrate)
-library(e1071)
+
 library(knitr)
 library(party)
 library(ada)
@@ -119,24 +120,48 @@ coef(fwdSelection, n)
 ### Challenge
 Use backward selection model to find the best model for mpg
 
-### logistic regression
+\newpage
+
+## Logistic Regression
+
+### Working Principle
+Fit the predictor values to a function whose value lies between 0 and 1. Choose a cut-off value to separates the function output values in two regions corresponding to two classes. A new observation class is decided by the region in which the function values corresponding to this observation lies.
+
+
+### Example
+```{r, results='hide', echo=FALSE}
+inSetosa <- iris$Species == "setosa"
+myIris <- iris[!inSetosa,]
+myIris$Species <- factor(myIris$Species, levels = c("versicolor", "virginica"))
+
+glmModel <- glm(Species ~ Petal.Length, data = myIris, family = binomial(link="logit"))
+predValue <- predict(glmModel, myIris, type = "response")
+
+pch <- ifelse(myIris$Species == "versicolor", 3, 4)
+col <- ifelse(myIris$Species == "versicolor", "red", "green")
+
+plot(jitter(myIris$Petal.Length, amount = 0.05),predValue, col = col, pch = pch)
+abline(h=0.5)
+legend(x=3, y = 1.0, legend = c("versicolor", "virginica"), pch = c(3,4), col=c("red", "green"))
+```
+
+
 ### Codes
 ```{r, results='hide'}
 inSetosa <- iris$Species == "setosa"
 myIris <- iris[!inSetosa,]
-head(myIris)
-glmModel <- glm(Species~Petal.Width, data = myIris, family = binomial(link="logit"))
-predValue <- predict(glmModel, myIris, type = "response")
-predValue
-plot(myIris$Petal.Width,predValue, col = myIris$Species)
-
+myIris$Species <- factor(myIris$Species, levels = c("versicolor", "virginica"))
 glmModel <- glm(Species ~ Petal.Length, data = myIris, family = binomial(link="logit"))
 predValue <- predict(glmModel, myIris, type = "response")
-predValue
-plot(myIris$Petal.Length,predValue, col = myIris$Species, pch = 19)
-legend(x=3, y = 0.8, legend = c("versicolor", "virginica"), pch = 19, col=c("red", "green"))
-
 ```
+
+### Model Assessment
+
+```{r}
+prediction <- ifelse(predValue > 0.5, "virginica", "versicolor")
+table(prediction, myIris$Species)
+```
+
 
 \newpage
 
@@ -567,14 +592,49 @@ text(3, 6.3, label = "Test Data")
 ```
 
 
-## svm
-```{r}
-#svmModel <- svm()
+## SVM
+
+### Working Principle
+It classifies a test observation depending on which side of a hyperplane it lies. The hyperplabe is chosen to correctly separate most of the training observations into two classes
+
+### Example
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+library(e1071)
+inSetosa <- iris$Species == "setosa"
+myIris <- iris[!inSetosa, c("Petal.Length", "Petal.Width", "Species")]
+myIris$Species <- factor(myIris$Species, levels = c("versicolor", "virginica"))
+
+svmModel <- svm(Species ~ ., data = myIris, kernal = "linear", scale = TRUE)
+w <- t(svmModel$coefs) %*% svmModel$SV
+b <- -svmModel$rho
+
+sym <- ifelse(myIris$Species == "versicolor", "+", "x")
+col <- ifelse(myIris$Species == "versicolor", "red", "green")
+
+plot(scale(myIris$Petal.Length), scale(myIris$Petal.Width), pch = sym, col = col)
+abline(a = -b/w[1,2], b = -w[1,1]/w[1,2], col = "blue", lty = 1)
+legend(x=-2.45, y = 1.85, legend = c("versicolor", "virginica", "decision boundary"), pch = c("+", "x", "_"), col = c("red", "green", "blue"), bty = "n")
 ```
 
+### Codes 
+```{r, message=FALSE, warning=FALSE, results='hide'}
+library(e1071)
+inSetosa <- iris$Species == "setosa"
+myIris <- iris[!inSetosa, c("Petal.Length", "Petal.Width", "Species")]
+myIris$Species <- factor(myIris$Species, levels = c("versicolor", "virginica"))
+svmModel <- svm(Species ~ ., data = myIris, kernal = "linear", 
+                scale = TRUE)
+summary(svmModel)
+prediction <- predict(svmModel, myIris[, 1:2])
+table(prediction, myIris$Species)
+```
 
-
-
-
+### Assessment
+```{r}
+prediction <- predict(svmModel, myIris[, 1:2])
+table(prediction, myIris$Species)
+mean(prediction==myIris$Species)
+```
 
 
