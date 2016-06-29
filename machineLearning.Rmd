@@ -21,15 +21,14 @@ output: pdf_document
 
 \newpage
 
+# Supervised Learning
+
 ```{r, echo = FALSE, results='hide', message=FALSE, warning=FALSE}
 library(caret)
 library(rattle)
 library(calibrate)
-
 library(knitr)
 library(party)
-library(ada)
-library(gbm)
 ```
 
 ## Linear Regression
@@ -166,13 +165,14 @@ table(prediction, myIris$Species)
 \newpage
 
 ## Tree based algorithm
-Used both for classification and regression
 
-### Working principle
+### Decision Tree
+
+#### Working principle
 Divide the data set into several small regions such that the response variables are (nearly) homogeneous in those regions. The predictd value of a new observation is the most dominant class of the region to which the observation belongs. 
 
 
-### Example
+#### Example
 Find the decision rule to predict the species of iris dataset based on Sepal.Length, Sepal.Width, Petal.Length, and Petal.Width
 
 
@@ -180,7 +180,7 @@ Find the decision rule to predict the species of iris dataset based on Sepal.Len
 iris[c(1,100,150),]
 ```
 
-### Decision Tree visualization
+
 
 ```{r, echo = FALSE, results='hide', message=FALSE, warning=FALSE}
 library(rpart)
@@ -222,7 +222,10 @@ legend(x=4.6,y=0.75, legend = c("setosa", "versicolor" , "virginica"),
 
 ```
 
-### Codes
+
+#### Codes
+
+
 ```{r, results='hide'}
 ## Load the required libraries
 library(rpart)
@@ -252,7 +255,6 @@ mean(predTestClass == testClass)          # Prediction Accuracy
 
 \newpage
 
-### Decision tree prediction visualization
 
 ```{r, echo=FALSE, message=FALSE, warning=FALSE}
 #par(mfrow=c(2,2))
@@ -303,67 +305,89 @@ par(mfrow=c(1,1))
 ```
 
 
-### Add some challenge
+#### Add some challenge
 
-### Advantages of decision tree
-Easy to interpret
+#### Problem with decision tree
+The decision is very easy to interpret. However, it has got low prediction accuracy. One way to enhance the prediction accuracy is to first build a lot of trees using the bootstrapped samples and use their mean as the prediction. In many cases, the trees formed in such a way are highly correlated as a result the averaging does not improve the result much. In order to decorrelate the trees, during the tree formation only some of the variables are considered when deciding which varibles to choose to split the tree on. In order to decorrelate the trees a random sample of m predictors (mtry) is chosen as split candidates from the full set of p predictors. 
 
-### Problem with the decision tree
-Lower prediction accuracy
+\newpage
 
-### Solution
-Aggregate many decision trees (bagging, random forest, boosting)
+### Random Forest
+It fits a number of decision tree classifiers on various sub-samples of the dataset and uses averaging for prediction. 
 
-## random Forest
-Need to decorrelate the trees. Making it more accurate
+Important parameters of the random forest are: 1) ntree, 2) mtry
 
-### ntree
+#### 1. ntree
+
 ```{r, echo=FALSE}
-include_graphics("rf.png")
+include_graphics("ntree2.png")
 ```
 
-### mtry
-Decorrelate the trees
-a random sample of m predictors is chosen as split candidates from the full set of 
-p predictors.
+#### 2. mtry
 
-```{r, echo=FALSE, fig.width=12}
-include_graphics("mtry.jpg")
+```{r, echo=FALSE}
+include_graphics("mtry5.png")
 ```
 
-### random forest example
-```{r, message=FALSE, warning=FALSE}
+\newpage
+
+#### Codes
+
+```{r, message = FALSE, warning = FALSE, results='hide'}
 library(randomForest)
-rfModel <- randomForest(Species ~ ., data=trainData, mtry=3, ntree=15)
-predClass <- predict(rfModel, newdata = testData)
-table(predClass, testClass)
-varImpPlot(rfModel)
+set.seed(1)
+rfModel <- randomForest(Species ~ ., data=iris, mtry=4, ntree=20)
+predClass <- predict(rfModel, newdata = iris)
+table(predClass, iris$Species)
+rfModel$importance 
 ```
 
-### Add some challenge
+#### Prediction Accuracy
 
-## Boosting
+```{r, echo = FALSE, message=FALSE, warning=FALSE}
+set.seed(1)
+rfModel <- randomForest(Species ~ ., data=iris, mtry=3, ntree=3)
+predClass <- predict(rfModel, newdata = iris)
+table(predClass, iris$Species)
+```
 
-### Illustration
+
+
+```{r, echo=FALSE}
+par(mar = c(4,8,4,2))
+barplot(rfModel$importance, names.arg = row.names(rfModel$importance), 
+        beside = TRUE, width = 0.2, las = 2, horiz = TRUE, col = "blue")
+par(mar = c(5.1, 4.1, 4.1, 2.1))
+```
+
+
+\newpage
+
+### Boosted Tree
+
+Combines a number of weak classifiers using proper weight to form a strong classifier
+
+#### Illustration
+
+The argument n.teees = 5000 indicates that we want 5000 trees, and the option interaction.depth = 4 limits the depth of each tree
+
 ```{r, echo=FALSE}
 include_graphics("boosting.png")
 ```
 
-### example
-```{r}
-#gbmModel <- gbm(Species ~ ., data = trainData, distribution = "multinomial", 
-#                n.trees = 20)
-#predict(gbmModel, newdata = testData, single.tree = TRUE, n.trees = 20, type = "response")
-
-
-# boost.boston=gbm(medv~.,data=Boston[train,],distribution= # #"gaussian",n.trees=5000,interaction.depth=4)
+#### Codes
+```{r, echo=FALSE, results='hide', message=FALSE, warning=FALSE}
+library(gbm)
+gbmModel <- gbm(Species ~ ., data = iris, n.trees = 20, distribution = "multinomial")
+gbm.pred <- predict(gbmModel, iris[,1:4], n.trees = 20)
+apply(gbm.pred, 1, function(row) which.max(row))
 ```
 
-The argument n.teees = 5000 indicates that we want 5000 trees, and the option interaction.depth = 4 limits the depth of each tree
+#### Assesment
 
 \newpage
 
-## knn
+## KNN
 make sure, you scale the data and also with an example tell why  it is important to 
 scale the data
 
@@ -453,146 +477,6 @@ table(predClass, testClass)
 
 \newpage
 
-## clustering example
-### kmeans clustering
-```{r, echo=FALSE, results='hide'}
-set.seed(100)
-index <- sample(c(TRUE, FALSE), nrow(iris), p = c(0.2, 0.8), replace = TRUE)
-myIris <- iris[index,3:4]
-group <- iris$Species[index]
-set.seed(100)
-predGroup <- kmeans(myIris, centers = 3, nstart = 10)
-predGroupC <- ifelse(predGroup$cluster==1, "setosa", ifelse(predGroup$cluster==2, 
-                                                   "versicolor", "virginnica"))
-predGroupC <- factor(predGroupC)
-table(predGroupC, group)
-
-par(mfrow = c(1,2))
-col <- ifelse(predGroupC == "setosa", "green", 
-              ifelse(predGroupC=="versicolor", "red", "blue"))
-plot(myIris$Petal.Length, myIris$Petal.Width, pch = 19, col = col)
-legend(x=1,y=2.5, legend = c("group1", "group2", "group3"), 
-       col = c("green", "red", "blue"), pch = 19, y.intersp=0.75, cex = 0.75,
-       bty = "n")
-
-col <- ifelse(group == "setosa", "green", ifelse(group=="versicolor", "red", "blue"))
-plot(myIris$Petal.Length, myIris$Petal.Width, pch = 17, col = col)
-legend(x=1,y=2.5, legend = c("setosa", "versicolor", "virginica"), 
-       col = c("green", "red", "blue"), pch = 17, y.intersp=0.75, cex = 0.75,
-       bty = "n")
-par(mfrow = c(1,1))
-```
-
-### Codes
-```{r}
-set.seed(100)
-index <- sample(c(TRUE, FALSE), nrow(iris), p = c(0.2, 0.8), replace = TRUE)
-myIris <- iris[index,3:4]
-group <- iris$Species[index]
-set.seed(100)
-predGroup <- kmeans(myIris, centers = 3, nstart = 10)
-predGroupC <- ifelse(predGroup$cluster==1, "setosa", ifelse(predGroup$cluster==2, 
-                                                   "versicolor", "virginnica"))
-predGroupC <- factor(predGroupC)
-table(predGroupC, group)
-```
-
-
-
-### Hierarchichal Clustering
-
-```{r, echo=FALSE, message=FALSE, warning=FALSE}
-set.seed(4)
-index <- sample(c(TRUE, FALSE), nrow(iris), p = c(0.05, 0.95), replace = TRUE)
-myIris <- iris[index,3:4]
-disM <- dist(myIris)
-irisClust <- hclust(disM)
-
-clusters <- cutree(irisClust, k = 3)
-clusters <- ifelse(clusters==1, "setosa", ifelse(clusters==2, 
-                                                   "versicolor", "virginnica"))
-clusters <- factor(clusters)
-col <- ifelse(clusters == "setosa", "green", 
-              ifelse(clusters=="versicolor", "red", "blue"))
-
-
-par(mfrow = c(2,2), mar = c(0.2,2,2,2))
-library(sparcl)
-ColorDendrogram(irisClust, y = col, labels = names(clusters), main = "Dendogram",   branchlength = 5)
-
-abline(h=1.5)
-plot(myIris$Petal.Length, myIris$Petal.Width, pch = " ",
-     xlab= "Petal.Length", ylab = "Petal.Width")
-text(myIris$Petal.Length, myIris$Petal.Width, labels = which(index==TRUE), 
-     cex = 0.4, col = col)
-
-
-
-plot(myIris$Petal.Length, myIris$Petal.Width, pch = 19, col = col)
-legend(x=1,y=2.5, legend = c("group1", "group2", "group3"), 
-       col = c("green", "red", "blue"), pch = 19, y.intersp=0.5, 
-       cex = 0.75, bty = "n")
-
-col <- ifelse(group == "setosa", "green", ifelse(group=="versicolor", "red", "blue"))
-plot(myIris$Petal.Length, myIris$Petal.Width, pch = 17, col = col)
-legend(x=1,y=2.5, legend = c("setosa", "versicolor", "virginica"), 
-       col = c("green", "red", "blue"), pch = 17, y.intersp=0.5, 
-       cex = 0.75, bty = "n")
-
-```
-
-#### Codes
-
-```{r}
-set.seed(4)
-index <- sample(c(TRUE, FALSE), nrow(iris), p = c(0.05, 0.95), replace = TRUE)
-myIris <- iris[index,3:4]
-disM <- dist(myIris)
-irisClust <- hclust(disM)
-clusters <- cutree(irisClust, k = 3)
-```
-
-## Cross-validation
-
-```{r, echo = FALSE}
-drawPoly <- function(x,y, col){
-  polygon(c(x,x+1,x+1,x, x), c(y,y,y+0.5,y+0.5,y), col = col)
-}
-
-
-plot(1, type="n", axes=F, xlab="", ylab="", xlim = c(0.5,6), ylim= c(0,8),
-     main = "5 fold cross validation illustration")
-for (i in 1:5){
-  for (j in 1:5) {
-    col <- ifelse(i==j, "red", "green")
-    drawPoly(i,j, col)
-  }
-}
-
-drawPoly(1,6, "red")
-drawPoly(1,7, "green")
-
-for(i in 1:5){
-  text(i+0.5, 0.5, label = paste("k = ", i, sep = ""))
-}
-
-for(i in 1:5){
-  text(0.5, i+0.25, label = 6-i)
-}
-
-text(3, 7.3, label = "Training Data")
-text(3, 6.3, label = "Test Data")
-```
-
-\newpage
-
-## Bay
-'s theorem
-```{r}
-#head(Titanic)
-```
-
-
 ## SVM
 
 ### Working Principle
@@ -672,4 +556,147 @@ table(prediction, myIris$Species)
 mean(prediction==myIris$Species)
 ```
 
+
+\newpage
+
+# Unsupervised Learning
+
+## kmeans clustering
+
+```{r, echo=FALSE, results='hide'}
+set.seed(100)
+index <- sample(c(TRUE, FALSE), nrow(iris), p = c(0.2, 0.8), replace = TRUE)
+myIris <- iris[index,3:4]
+group <- iris$Species[index]
+set.seed(100)
+predGroup <- kmeans(myIris, centers = 3, nstart = 10)
+predGroupC <- ifelse(predGroup$cluster==1, "setosa", ifelse(predGroup$cluster==2, 
+                                                   "versicolor", "virginnica"))
+predGroupC <- factor(predGroupC)
+table(predGroupC, group)
+
+par(mfrow = c(1,2))
+col <- ifelse(predGroupC == "setosa", "green", 
+              ifelse(predGroupC=="versicolor", "red", "blue"))
+plot(myIris$Petal.Length, myIris$Petal.Width, pch = 19, col = col)
+legend(x=1,y=2.5, legend = c("group1", "group2", "group3"), 
+       col = c("green", "red", "blue"), pch = 19, y.intersp=0.75, cex = 0.75,
+       bty = "n")
+
+col <- ifelse(group == "setosa", "green", ifelse(group=="versicolor", "red", "blue"))
+plot(myIris$Petal.Length, myIris$Petal.Width, pch = 17, col = col)
+legend(x=1,y=2.5, legend = c("setosa", "versicolor", "virginica"), 
+       col = c("green", "red", "blue"), pch = 17, y.intersp=0.75, cex = 0.75,
+       bty = "n")
+par(mfrow = c(1,1))
+```
+
+### Codes
+
+```{r}
+set.seed(100)
+index <- sample(c(TRUE, FALSE), nrow(iris), p = c(0.2, 0.8), replace = TRUE)
+myIris <- iris[index,3:4]
+group <- iris$Species[index]
+set.seed(100)
+predGroup <- kmeans(myIris, centers = 3, nstart = 10)
+predGroupC <- ifelse(predGroup$cluster==1, "setosa", ifelse(predGroup$cluster==2, 
+                                                   "versicolor", "virginnica"))
+predGroupC <- factor(predGroupC)
+table(predGroupC, group)
+```
+
+
+
+## Hierarchichal Clustering
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+set.seed(4)
+index <- sample(c(TRUE, FALSE), nrow(iris), p = c(0.05, 0.95), replace = TRUE)
+myIris <- iris[index,3:4]
+species <- iris[index,5]
+disM <- dist(myIris)
+irisClust <- hclust(disM)
+
+clusters <- cutree(irisClust, k = 3)
+clusters <- ifelse(clusters==1, "setosa", ifelse(clusters==2, 
+                                                   "versicolor", "virginica"))
+clusters <- factor(clusters)
+col <- ifelse(clusters == "setosa", "green", 
+              ifelse(clusters=="versicolor", "red", "blue"))
+
+
+par(mfrow = c(2,2), mar = c(0.2,2,2,2))
+library(sparcl)
+ColorDendrogram(irisClust, y = col, labels = names(clusters), main = "Dendogram",   branchlength = 5)
+
+abline(h=1.5)
+plot(myIris$Petal.Length, myIris$Petal.Width, pch = " ",
+     xlab= "Petal.Length", ylab = "Petal.Width")
+text(myIris$Petal.Length, myIris$Petal.Width, labels = which(index==TRUE), 
+     cex = 0.4, col = col)
+
+
+
+plot(myIris$Petal.Length, myIris$Petal.Width, pch = 19, col = col)
+legend(x=1,y=2.0, legend = c("group1", "group2", "group3"), 
+       col = c("green", "red", "blue"), pch = 19, y.intersp=0.75, 
+       cex = 0.75, bty = "n")
+
+col <- ifelse(species == "setosa", "green", 
+              ifelse(species=="versicolor", "red", "blue"))
+plot(myIris$Petal.Length, myIris$Petal.Width, pch = 17, col = col)
+legend(x=1,y=2.0, legend = c("setosa", "versicolor", "virginica"), 
+       col = c("green", "red", "blue"), pch = 17, y.intersp=0.75, 
+       cex = 0.75, bty = "n")
+
+```
+
+### Codes
+
+```{r}
+set.seed(4)
+index <- sample(c(TRUE, FALSE), nrow(iris), p = c(0.05, 0.95), replace = TRUE)
+myIris <- iris[index,3:4]
+disM <- dist(myIris)
+irisClust <- hclust(disM)
+clusters <- cutree(irisClust, k = 3)
+```
+
+
+\newpage
+
+# Sampling Technique
+
+## k-fold Cross-validation
+
+```{r, echo = FALSE}
+drawPoly <- function(x,y, col){
+  polygon(c(x,x+1,x+1,x, x), c(y,y,y+0.5,y+0.5,y), col = col)
+}
+
+
+plot(1, type="n", axes=F, xlab="", ylab="", xlim = c(0.5,6), ylim= c(0,8),
+     main = "5 fold cross validation illustration")
+for (i in 1:5){
+  for (j in 1:5) {
+    col <- ifelse(i==j, "red", "green")
+    drawPoly(i,j, col)
+  }
+}
+
+drawPoly(1,6, "red")
+drawPoly(1,7, "green")
+
+for(i in 1:5){
+  text(i+0.5, 0.5, label = paste("k = ", i, sep = ""))
+}
+
+for(i in 1:5){
+  text(0.5, i+0.25, label = 6-i)
+}
+
+text(3, 7.3, label = "Training Data")
+text(3, 6.3, label = "Test Data")
+```
 
