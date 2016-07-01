@@ -8,16 +8,15 @@ output: pdf_document
 1.  Definition: It is a method of teaching computers to make predictions based on data 
 
 2. Types of machine learning:
-    + Supervised learning
-    + Unsupervised learning
+    + Supervised learning: Learning from data in which output values are known 
+    + Unsupervised learning: Learning from data in which output values  are unknown 
 
-3. Machine Learning in Everday life:
-    + Forecasting
-    + Spam filtering
-    + Product recommendation
-    + Fraud detection
- 
-
+3. Machine Learning Applications:
+    + Prediction: Fuel Consumption of automobile based on their weight, House Prices based on locality, size 
+    + Forecasting: Linear Regression
+    + Classification: Predicting flower species based on sepal and petal measurement
+    Decision Tree, SVM, Logistic Regression
+    + Clustering: Finding similar species of flowers based on their sepal and petal measurements, K-means, Hierarchical
 
 \newpage
 
@@ -317,13 +316,13 @@ It fits a number of decision tree classifiers on various sub-samples of the data
 
 Important parameters of the random forest are: 1) ntree, 2) mtry
 
-#### 1. ntree
+1. ntree
 
 ```{r, echo=FALSE}
 include_graphics("ntree2.png")
 ```
 
-#### 2. mtry
+2. mtry
 
 ```{r, echo=FALSE}
 include_graphics("mtry5.png")
@@ -331,7 +330,7 @@ include_graphics("mtry5.png")
 
 \newpage
 
-#### Codes
+Codes
 
 ```{r, message = FALSE, warning = FALSE, results='hide'}
 library(randomForest)
@@ -342,7 +341,7 @@ table(predClass, iris$Species)
 rfModel$importance 
 ```
 
-#### Prediction Accuracy
+Prediction Accuracy
 
 ```{r, echo = FALSE, message=FALSE, warning=FALSE}
 set.seed(1)
@@ -351,12 +350,13 @@ predClass <- predict(rfModel, newdata = iris)
 table(predClass, iris$Species)
 ```
 
-
+Variable Importance
 
 ```{r, echo=FALSE}
 par(mar = c(4,8,4,2))
 barplot(rfModel$importance, names.arg = row.names(rfModel$importance), 
-        beside = TRUE, width = 0.2, las = 2, horiz = TRUE, col = "blue")
+        beside = TRUE, width = 0.2, las = 2, horiz = TRUE, col = "blue", space = 0.3,
+        xlab = "MeanDecreaseGini")
 par(mar = c(5.1, 4.1, 4.1, 2.1))
 ```
 
@@ -490,21 +490,28 @@ inSetosa <- iris$Species == "setosa"
 myIris <- iris[!inSetosa, c("Petal.Length", "Petal.Width", "Species")]
 myIris$Species <- factor(myIris$Species, levels = c("versicolor", "virginica"))
 svmModel <- svm(Species ~ ., data = myIris, kernal = "linear", 
-                scale = FALSE)
+                scale = TRUE)
 
 sym <- ifelse(myIris$Species == "versicolor", 15, 16)
 col <- ifelse(myIris$Species == "versicolor", "red", "green")
 
-x1val <- seq(0.5,8,length.out = 200)
-x2val <- seq(0.5,8, length.out = 200)
+w <- t(svmModel$coefs) %*% svmModel$SV
+b <- -svmModel$rho
 
-xval <- data.frame(expand.grid(x1val, x2val))
-names(xval) <- c("Petal.Length", "Petal.Width")
-yval <- predict(svmModel, xval)
-pcol <- ifelse(yval=="versicolor", "red", "green")
-plot(myIris$Petal.Length, myIris$Petal.Width, pch = sym, col = col, asp = 1,
+x1val <- seq(-4.5, 4.2,length.out = 100)
+x2val <- seq(-1.8,2.2, length.out = 100)
+
+val <- data.frame(expand.grid(x1val, x2val))
+val$y <- w[1,1]*val$Var1 + w[1,2]*val$Var2 + b 
+  
+  
+names(val) <- c("Petal.Length", "Petal.Width", "y")
+pcol <- ifelse(val$y > 0, "red", "green")
+plot(scale(myIris$Petal.Length), scale(myIris$Petal.Width), pch = sym, col = col, asp = 1,
      main = "Linear Decision Boundary")
-points(xval, col = pcol, cex = 0.02)
+#plot(myIris$Petal.Length, myIris$Petal.Width, pch = sym, col = col, asp = 1,
+#     main = "Linear Decision Boundary")
+points(val$Petal.Length, val$Petal.Width, col = pcol, cex = 0.02)
 
 legend(x=3, y = 2.5, legend = c("versicolor", "virginica"), pch = c(15,16), col = c("red", "green"), bty = "n")
 ```
@@ -515,7 +522,7 @@ inSetosa <- iris$Species == "setosa"
 myIris <- iris[!inSetosa, c("Petal.Length", "Petal.Width", "Species")]
 myIris$Species <- factor(myIris$Species, levels = c("versicolor", "virginica"))
 svmModel <- svm(Species ~ ., data = myIris, kernal = "radial", cost = 1e5,
-                scale = FALSE)
+                scale = TRUE)
 
 sym <- ifelse(myIris$Species == "versicolor", 15, 16)
 col <- ifelse(myIris$Species == "versicolor", "red", "green")
@@ -666,9 +673,17 @@ clusters <- cutree(irisClust, k = 3)
 
 \newpage
 
-# Sampling Technique
+# Resampling Methods
 
-## k-fold Cross-validation
+Resampling methods involve repeatedly drawing samples from the original data and refitting it to the model of interest. These methods are very useful in getting additional information about the model.   
+
+
+## 1. k-fold Cross-validation
+
+This method involves randomly splitting dataset into k-folds of equal size. Out of k-fold, one group of observation is held-out and the remaining k-1 group of observations are used to train the model.
+
+This method is very useful to estimate 1. test-error associated with a given learning method in order to evaluate its performance (model assessment)  2. choose appropriate level of flexibility (model selection)
+
 
 ```{r, echo = FALSE}
 drawPoly <- function(x,y, col){
@@ -676,8 +691,11 @@ drawPoly <- function(x,y, col){
 }
 
 
-plot(1, type="n", axes=F, xlab="", ylab="", xlim = c(0.5,6), ylim= c(0,8),
-     main = "5 fold cross validation illustration")
+plot(1, type="n", axes=F, xlab="", ylab="", xlim = c(0,6), ylim= c(0.5,10),
+     main = "5-fold cross-validation illustration")
+
+polygon(c(1,6,6,1,1), c(9,9,9.5,9.5,9), col = "grey")
+
 for (i in 1:5){
   for (j in 1:5) {
     col <- ifelse(i==j, "red", "green")
@@ -698,5 +716,43 @@ for(i in 1:5){
 
 text(3, 7.3, label = "Training Data")
 text(3, 6.3, label = "Test Data")
+text(0.4, 9.7, label = "original")
+text(0.4, 8.9, label = "data")
 ```
+
+Leave-one-out cross-validation (LOOCV) is a special case of k-fold cross-validation where k = n, where n is the number of observations.  
+
+
+\newpage
+
+## 2. Bootstrap Sampling
+
+This method involves repeatedly withdrawing samples from the original data set with replacement. The sample size of the withdrawn sample is kept the same as that of the original data. 
+
+The n trees in the random forest are fitted using n bootstrapped samples obtained from the original observation. Bootstrapped sampling is also used to measure the accuracy of the fitted parameters.
+
+```{r, echo = FALSE}
+pch <- c(15,16,17,18,8)
+col <- c("red", "green", "blue", "magenta", "black")
+y <- rep(1,5)
+set.seed(1)
+in1 <- sample(1:5, size = 5, replace= TRUE)
+set.seed(3)
+in2 <- sample(1:5, size = 5, replace= TRUE)
+set.seed(10)
+in3 <- sample(1:5, size = 5, replace= TRUE)
+
+plot(1, type="n", axes=F, xlab="", ylab="", ylim = c(12,0), xlim = c(-1.6,5),
+     main = "Bootstrap Sampling Illustration")
+points(y, pch = pch, col = col, cex = 3)
+points(y+4, pch = pch[in1], col = col[in1], cex = 3)
+points(y+7, pch = pch[in2], col = col[in2], cex = 3)
+points(y+10, pch = pch[in3], col = col[in3], cex = 3)
+text(-1,1, labels = "Observation")
+text(-1,5, labels = "Sample 1")
+text(-1,8, labels = "Sample 2")
+text(-1,11, labels="Sample 3")
+```
+
+
 
