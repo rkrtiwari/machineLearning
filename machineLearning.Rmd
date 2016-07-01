@@ -30,38 +30,57 @@ library(knitr)
 library(party)
 ```
 
-## Linear Regression
+## 1. Linear Regression
 
-### Working principle
-Find a straight line that best describes the relationship between the dependent and the independent variables. In order to obtain the predicted value of the dependent variable, plug in the the values of the independent variable in the equation of the line. 
+This method involves finding a straight line (y = ax + b) that best describes the relationship between the dependent and the independent variables. This best fit line is then used to predict the value of the dependent variable for any given values of the independent variables. 
 
-### Example
-Build a linear model to describe the relationship between mpg (miles per gallon) and wt (weight of the car) in the mtcars dataset
+### 1.1 Example
+A linear model that captures the relationship between mpg (miles per gallon) and wt (weight of the car) in the mtcars dataset
 
 ```{r, echo=FALSE}
 lmModel <- lm(mpg ~ wt, data = mtcars)
-plot(mtcars$wt, mtcars$mpg, xlab="wt", ylab="mpg", col = "blue", pch = 20)
+plot(mtcars$wt, mtcars$mpg, xlab="wt", ylab="mpg", col = "blue", pch = 20, 
+     xlim = c(0,5.5), ylim = c(5,40))
 abline(lmModel)
+predValue <- predict(lmModel, data.frame(wt = 3))
+points(3, predValue, pch = 4, col = "red")  
+lines(x = c(3,3), y = c(-0.2, predValue), lty = 2)
+lines(x = c(3,-0.2), y = c(predValue, predValue), lty = 2)
+text(0.2,23, labels = round(predValue,2))
+
+predValue <- predict(lmModel, data.frame(wt = 4))
+points(4, predValue, pch = 4, col = "red")  
+lines(x = c(4,4), y = c(-0.2, predValue), lty = 2)
+lines(x = c(4,-0.2), y = c(predValue, predValue), lty = 2)
+text(0.2,17.2, labels = round(predValue,2))
+legend(x=3.8,y=39, legend = "Actual Value", pch=19, col = "blue", bty = "n")
+legend(x=3.8,y=36, legend = c("model"), lty=1, col = "black", bty = "n")
 ```
 
-### Codes
-
+### 1.2 R Codes
 
 ```{r, results='hide'}
-## Build the linear model object
+## Build the linear model 
 lmModel <- lm(mpg ~ wt, data = mtcars)
 
-## Obtain the model parameters
-sumModel <- summary(lmModel)
-sumModel$coefficients
-
-## Prediction using the model
-predValue <- predict(lmModel, data.frame(wt = c(3.5, 4.2)))
+## Use the linear model to make prediction
+predValue <- predict(lmModel, data.frame(wt = 3))
+predValue <- predict(lmModel, data.frame(wt = c(3,4)))
 predValue <- predict(lmModel, data.frame(wt = mtcars$wt))
+
+## Access the model parameters
+coef(lmModel)
 ```
 
 
-### Model Assessment 
+### 1.3 Interpretation of the model parameter
+```{r}
+coef(lmModel)
+```
+
+The intercept is the model prediction for the case when the independent variable is 0. The slope is the change in the dependent variable when the independent variable changes by 1 unit 
+
+### 1.4 Model Assessment 
 
 1. Visual Inspection
 
@@ -69,7 +88,9 @@ predValue <- predict(lmModel, data.frame(wt = mtcars$wt))
 plot(mtcars$wt, mtcars$mpg, xlab="wt", ylab="mpg", col = "blue", pch = 20)
 abline(lmModel)
 segments(mtcars$wt, predValue, mtcars$wt, mtcars$mpg, col="red")
-legend(x=4.0,y=30, legend = c("residual"), lty=1, col = "red")
+legend(x=4.2,y=33, legend = "Actual Value", pch=19, col = "blue", bty = "n")
+legend(x=4.2,y=30, legend = c("model"), lty=1, col = "black", bty = "n")
+legend(x=4.2,y=27, legend = c("residual"), lty=1, col = "red", bty = "n")
 ```
 
 2. R-squared value
@@ -79,50 +100,50 @@ sumModel <- summary(lmModel)
 sumModel$r.squared
 ```
 
-3. F-statistics
 
-```{r}
-sumModel$fstatistic
-```
-
-### Extension of linear model 
+### 1.5 Extension of linear model 
 
 ```{r, results='hide', message=FALSE, warning=FALSE}
 ## More than one predictors
-lmModel2 <- lm(mpg ~ wt+hp+disp, data = mtcars) # wt, hp, and disp will be used as predictor
+lmModel2 <- lm(mpg ~ wt + hp + disp, data = mtcars) # wt, hp, and disp will be used as 
+# predictor
 lmModel3  <- lm(mpg~ ., data = mtcars)   # All the variable will be used
 
-## subset selection: 1) Identify the best model that contains a given number of predictors
+## subset selection: 
+## 1) Identify the best model that contains a given number of predictors
 ## 2) Identify the overall best model
 
 library(leaps)  # subset selection library
 fwdSelection <- regsubsets(mpg ~ ., data = mtcars, method = "forward")
 sumFwdSel <- summary(fwdSelection)
-sumFwdSel$outmat  # 1) Included predictor in the Best Model when the number of predictors is fixed 
-which.max(sumFwdSel$adjr2) # 2) overall best model has the highest adjusted r-squared value
+sumFwdSel$outmat  # 1) Shows the predictors to be included when their numbers are fixed 
+which.max(sumFwdSel$adjr2) # 2) overall best model has the highest adjusted 
+# r-squared value
 ```
 
-### Output
-1. Included predictors in the best model when the number of predictors are fixed
+### 1.6 Forward model selection: Output
+
+1. Predictors to be included in the model when their numbers are fixed
+
 ```{r}
 sumFwdSel$outmat
 ```
 
 2. Overall best model
+
 ```{r}
 n <- which.max(sumFwdSel$adjr2)
 coef(fwdSelection, n)
 ```
 
 
-### Challenge
+### 1.7 Challenge
 Use backward selection model to find the best model for mpg
 
 \newpage
 
-## Logistic Regression
+## 2. Logistic Regression
 
-### Working Principle
 Fit the predictor values to a function whose value lies between 0 and 1. Choose a cut-off value to separates the function output values in two regions corresponding to two classes. A new observation class is decided by the region in which the function values corresponding to this observation lies.
 
 
@@ -163,9 +184,9 @@ table(prediction, myIris$Species)
 
 \newpage
 
-## Tree based algorithm
+## 3. Tree based algorithm
 
-### Decision Tree
+### 3.1 Decision Tree
 
 #### Working principle
 Divide the data set into several small regions such that the response variables are (nearly) homogeneous in those regions. The predictd value of a new observation is the most dominant class of the region to which the observation belongs. 
@@ -311,7 +332,7 @@ The decision is very easy to interpret. However, it has got low prediction accur
 
 \newpage
 
-### Random Forest
+### 3.2 Random Forest
 It fits a number of decision tree classifiers on various sub-samples of the dataset and uses averaging for prediction. 
 
 Important parameters of the random forest are: 1) ntree, 2) mtry
@@ -363,7 +384,7 @@ par(mar = c(5.1, 4.1, 4.1, 2.1))
 
 \newpage
 
-### Boosted Tree
+### 3.3 Boosted Tree
 
 Combines a number of weak classifiers using proper weight to form a strong classifier
 
@@ -387,11 +408,8 @@ apply(gbm.pred, 1, function(row) which.max(row))
 
 \newpage
 
-## KNN
-make sure, you scale the data and also with an example tell why  it is important to 
-scale the data
+## 4. KNN
 
-### Working principle
 It assumes that the members of a given class have similar characteristics. So, a given observation is assigned the class of its nearest neighbours (number of nearest neighbour to be decided by the user)
 
 ### Example
@@ -477,10 +495,9 @@ table(predClass, testClass)
 
 \newpage
 
-## SVM
+## 5. SVM
 
-### Working Principle
-It classifies a test observation depending on which side of a hyperplane it lies. The hyperplabe is chosen to correctly separate most of the training observations into two classes
+It classifies a test observation depending on which side of a hyperplane it lies. The hyperplane is chosen to correctly separate most of the training observations into two classes.
 
 ### Example
 
@@ -507,13 +524,14 @@ val$y <- w[1,1]*val$Var1 + w[1,2]*val$Var2 + b
   
 names(val) <- c("Petal.Length", "Petal.Width", "y")
 pcol <- ifelse(val$y > 0, "red", "green")
-plot(scale(myIris$Petal.Length), scale(myIris$Petal.Width), pch = sym, col = col, asp = 1,
-     main = "Linear Decision Boundary")
-#plot(myIris$Petal.Length, myIris$Petal.Width, pch = sym, col = col, asp = 1,
-#     main = "Linear Decision Boundary")
+plot(scale(myIris$Petal.Length), scale(myIris$Petal.Width), pch = sym, col = col,
+     main = "Linear Decision Boundary", xlab = "scale(Petal.Length)",
+     ylab = "scale(Petal.Width)",
+     xlim = c(-3,2.8))
+
 points(val$Petal.Length, val$Petal.Width, col = pcol, cex = 0.02)
 
-legend(x=3, y = 2.5, legend = c("versicolor", "virginica"), pch = c(15,16), col = c("red", "green"), bty = "n")
+legend(x=-3.0, y = 2, legend = c("versicolor", "virginica"), pch = c(15,16), col = c("red", "green"), bty = "n")
 ```
 
 ```{r, echo=FALSE, message=FALSE, warning=FALSE}
@@ -521,24 +539,36 @@ library(e1071)
 inSetosa <- iris$Species == "setosa"
 myIris <- iris[!inSetosa, c("Petal.Length", "Petal.Width", "Species")]
 myIris$Species <- factor(myIris$Species, levels = c("versicolor", "virginica"))
-svmModel <- svm(Species ~ ., data = myIris, kernal = "radial", cost = 1e5,
+svmModel <- svm(Species ~ ., data = myIris, kernal = "radial", cost = 100,
                 scale = TRUE)
 
 sym <- ifelse(myIris$Species == "versicolor", 15, 16)
 col <- ifelse(myIris$Species == "versicolor", "red", "green")
 
-x1val <- seq(0.5,8,length.out = 200)
-x2val <- seq(0.5,8, length.out = 200)
+x1mean <- mean(myIris$Petal.Length)
+x1sd <- sd(myIris$Petal.Length)
+
+x2mean <- mean(myIris$Petal.Width)
+x2sd <- sd(myIris$Petal.Width)
+
+x1val <- seq(-1,8,length.out = 200)
+x2val <- seq(-1,8, length.out = 200)
 
 xval <- data.frame(expand.grid(x1val, x2val))
 names(xval) <- c("Petal.Length", "Petal.Width")
 yval <- predict(svmModel, xval)
+
+xval$Petal.Length <- (xval$Petal.Length - x1mean)/x1sd
+xval$Petal.Width  <- (xval$Petal.Width - x2mean)/x2sd
+
 pcol <- ifelse(yval=="versicolor", "red", "green")
-plot(myIris$Petal.Length, myIris$Petal.Width, pch = sym, col = col, asp = 1,
-     main = "Non-Linear Decision Boundary")
+plot(scale(myIris$Petal.Length), scale(myIris$Petal.Width), pch = sym, col = col,
+     main = "Non-Linear Decision Boundary", 
+     xlab = "scale(Petal.Length)", ylab = "scale(Petal.Width)",
+     xlim = c(-3,2.8))
 points(xval, col = pcol, cex = 0.02)
 
-legend(x=3, y = 2.5, legend = c("versicolor", "virginica"), pch = c(15,16), col = c("red", "green"), bty = "n")
+legend(x=-3.0, y = 2, legend = c("versicolor", "virginica"), pch = c(15,16), col = c("red", "green"), bty = "n")
 ```
 
 
@@ -568,7 +598,7 @@ mean(prediction==myIris$Species)
 
 # Unsupervised Learning
 
-## kmeans clustering
+## 1. kmeans clustering
 
 ```{r, echo=FALSE, results='hide'}
 set.seed(100)
@@ -615,7 +645,7 @@ table(predGroupC, group)
 
 
 
-## Hierarchichal Clustering
+## 2. Hierarchichal Clustering
 
 ```{r, echo=FALSE, message=FALSE, warning=FALSE}
 set.seed(4)
@@ -680,7 +710,7 @@ Resampling methods involve repeatedly drawing samples from the original data and
 
 ## 1. k-fold Cross-validation
 
-This method involves randomly splitting dataset into k-folds of equal size. Out of k-fold, one group of observation is held-out and the remaining k-1 group of observations are used to train the model.
+This method involves randomly splitting dataset into k-folds of equal size. Out of k-fold, one group of observation is held-out and the remaining k-1 groups of observations are used to train the model.
 
 This method is very useful to estimate 1. test-error associated with a given learning method in order to evaluate its performance (model assessment)  2. choose appropriate level of flexibility (model selection)
 
